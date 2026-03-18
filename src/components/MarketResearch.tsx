@@ -75,7 +75,7 @@ export function MarketResearch({ brand, model, year, purchasePrice, onSuggestPri
           </Button>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Busca preços em Webmotors e OLX para ajudar na precificação
+          Busca preços em Webmotors, OLX e Mercado Livre para ajudar na precificação
         </p>
       </CardHeader>
       <CardContent>
@@ -158,7 +158,7 @@ export function MarketResearch({ brand, model, year, purchasePrice, onSuggestPri
                     <div key={i} className="flex items-center justify-between p-3 bg-muted rounded-lg text-sm">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <Badge variant={listing.source === "Webmotors" ? "default" : "secondary"} className="text-xs">
+                          <Badge variant={listing.source === "Webmotors" ? "default" : listing.source === "MercadoLivre" ? "outline" : "secondary"} className="text-xs">
                             {listing.source}
                           </Badge>
                           <span className="font-medium truncate">{listing.title}</span>
