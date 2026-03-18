@@ -3,462 +3,624 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Printer, Plus, FileText } from "lucide-react";
+import { toast } from "sonner";
 
-type ContractData = {
-  vehicle: {
-    title: string | null;
-    brand: string | null;
-    model: string | null;
-    plate: string | null;
-    renavan: string | null;
-    manufacturing_year: number | null;
-    model_year: number | null;
-    current_km: number | null;
-    actual_sale_price: number | null;
-    chassis?: string | null;
-    motor?: string | null;
-    combustivel?: string | null;
-    km_entrega?: number | null;
-    cor?: string | null;
-    entrega?: string | null;
-  } | null;
-  customer: {
-    name: string;
-    email: string;
-    phone: string | null;
-    address?: string | null;
-    cpf?: string | null;
-    rg?: string | null;
-    cnh?: string | null;
-  } | null;
-  trade_in?: {
-    brand: string | null;
-    model: string | null;
-    plate: string | null;
-    renavan: string | null;
-    chassis: string | null;
-    motor: string | null;
-    combustivel: string | null;
-    km_entrega: number | null;
-    cor: string | null;
-    entrega: string | null;
-    value: number | null;
-  } | null;
+type StoreInfo = {
+  store_name: string;
+  cnpj?: string;
+  address?: string;
+  phone?: string;
+  whatsapp_number?: string;
+  email?: string;
+};
+
+type Vehicle = {
+  id: string;
+  title: string | null;
+  brand: string | null;
+  model: string | null;
+  plate: string | null;
+  renavan: string | null;
+  manufacturing_year: number | null;
+  model_year: number | null;
+  current_km: number | null;
+  actual_sale_price: number | null;
+  purchase_price: number | null;
+  price: number | null;
+  fipe_price: number | null;
+};
+
+type Customer = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  cpf: string | null;
+  cnpj: string | null;
+  document_type: string | null;
+  address: string | null;
+};
+
+type TradeIn = {
+  brand: string;
+  model: string;
+  plate: string;
+  renavan: string;
+  chassis: string;
+  motor: string;
+  combustivel: string;
+  km_entrega: string;
+  cor: string;
+  value: string;
+};
+
+type PaymentMethod = {
+  type: "financiamento" | "avista" | "cartao" | "pix" | "boleto" | "troca" | "outro";
+  description: string;
+  value: string;
 };
 
 export default function Contract() {
   const [searchParams] = useSearchParams();
-  const vehicleId = searchParams.get("vehicle");
-  const customerId = searchParams.get("customer");
-  
-  const [contractData, setContractData] = useState<ContractData>({
-    vehicle: null,
-    customer: null,
-  });
+  const vehicleIdParam = searchParams.get("vehicle");
+  const customerIdParam = searchParams.get("customer");
+
+  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showContract, setShowContract] = useState(false);
+
+  // Trade-in
+  const [hasTradeIn, setHasTradeIn] = useState(false);
+  const [tradeIn, setTradeIn] = useState<TradeIn>({
+    brand: "", model: "", plate: "", renavan: "", chassis: "",
+    motor: "", combustivel: "", km_entrega: "", cor: "", value: "",
+  });
+
+  // Payments
+  const [payments, setPayments] = useState<PaymentMethod[]>([]);
+  const [salePrice, setSalePrice] = useState("");
+
+  // Warranty
+  const [warrantyMonths, setWarrantyMonths] = useState("3");
+  const [warrantyKm, setWarrantyKm] = useState("3000");
 
   useEffect(() => {
-    if (vehicleId && customerId) {
-      loadContractData();
-    } else {
-      // Dados mockados para exemplo
-      setContractData({
-        vehicle: {
-          title: "Renault Logan Expression 1.6 16V SCe (Flex)",
-          brand: "Renault",
-          model: "Logan",
-          plate: "ABC1234",
-          renavan: "112212400",
-          manufacturing_year: 2022,
-          model_year: 2023,
-          current_km: 58000,
-          actual_sale_price: 44833.00,
-          chassis: "93Y4SRFH4JJ874878",
-          motor: "K7M",
-          combustivel: "Flex (Gasolina/Etanol)",
-          entrega: "12/03/2025 17:18",
-          cor: "Branco",
-        },
-        customer: {
-          name: "João da Silva",
-          email: "joao@email.com",
-          phone: "(85) 99999-9999",
-          address: "Rua Principal, 123, Centro",
-          cpf: "123.456.789-00",
-          rg: "2000099",
-          cnh: "12345678900",
-        },
-        trade_in: {
-          brand: "Honda",
-          model: "CG 150 Titan ESD (Mix)",
-          plate: "OCF2A63",
-          renavan: "00337982357",
-          chassis: "9C2KC1550BR545655",
-          motor: "KC15E5",
-          combustivel: "Flex (Gasolina/Etanol)",
-          km_entrega: 45000,
-          cor: "Preto",
-          entrega: "12/03/2025 17:17",
-          value: 9000.00,
-        },
-      });
-      setLoading(false);
-    }
-  }, [vehicleId, customerId]);
+    loadData();
+  }, []);
 
-  const loadContractData = async () => {
+  const loadData = async () => {
     try {
-      const [vehicleResult, customerResult] = await Promise.all([
-        supabase.from("products").select("*").eq("id", vehicleId).single(),
-        supabase.from("customers").select("*").eq("id", customerId).single(),
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [storeRes, vehiclesRes, customersRes] = await Promise.all([
+        supabase.from("store_settings").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("products").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("customers").select("*").eq("user_id", user.id).order("name"),
       ]);
 
-      if (vehicleResult.data && customerResult.data) {
-        setContractData({
-          vehicle: vehicleResult.data,
-          customer: customerResult.data,
+      if (storeRes.data) {
+        setStoreInfo({
+          store_name: storeRes.data.store_name || "Minha Loja",
+          address: storeRes.data.address || "",
+          phone: storeRes.data.phone || storeRes.data.whatsapp_number || "",
+          email: storeRes.data.email || "",
         });
       }
+
+      setVehicles(vehiclesRes.data || []);
+      setCustomers(customersRes.data || []);
+
+      // Pre-select if params provided
+      if (vehicleIdParam) {
+        const v = vehiclesRes.data?.find((x: Vehicle) => x.id === vehicleIdParam);
+        if (v) {
+          setSelectedVehicle(v);
+          setSalePrice(String(v.actual_sale_price || v.price || ""));
+        }
+      }
+      if (customerIdParam) {
+        const c = customersRes.data?.find((x: Customer) => x.id === customerIdParam);
+        if (c) setSelectedCustomer(c);
+      }
     } catch (error) {
-      console.error("Error loading contract data:", error);
+      console.error("Error loading data:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectVehicle = (vehicleId: string) => {
+    const v = vehicles.find(x => x.id === vehicleId);
+    if (v) {
+      setSelectedVehicle(v);
+      setSalePrice(String(v.actual_sale_price || v.price || ""));
+    }
+  };
+
+  const handleSelectCustomer = (customerId: string) => {
+    const c = customers.find(x => x.id === customerId);
+    if (c) setSelectedCustomer(c);
+  };
+
+  const addPayment = () => {
+    setPayments([...payments, { type: "financiamento", description: "", value: "" }]);
+  };
+
+  const updatePayment = (index: number, field: keyof PaymentMethod, value: string) => {
+    const updated = [...payments];
+    (updated[index] as any)[field] = value;
+    setPayments(updated);
+  };
+
+  const removePayment = (index: number) => {
+    setPayments(payments.filter((_, i) => i !== index));
+  };
+
+  const generateContract = () => {
+    if (!selectedVehicle || !selectedCustomer) {
+      toast.error("Selecione um veiculo e um cliente");
+      return;
+    }
+    if (!salePrice) {
+      toast.error("Informe o valor de venda");
+      return;
+    }
+    setShowContract(true);
   };
 
   const handlePrint = () => {
     window.print();
   };
 
-  const formatCurrency = (value: number | null) => {
-    if (!value) return "R$ 0,00";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+  const formatCurrency = (value: number | string | null) => {
+    const num = typeof value === "string" ? parseFloat(value) : value;
+    if (!num || isNaN(num)) return "R$ 0,00";
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(num);
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+
+  const today = new Date();
+  const tradeInValue = parseFloat(tradeIn.value) || 0;
+  const salePriceNum = parseFloat(salePrice) || 0;
+  const totalPayments = payments.reduce((s, p) => s + (parseFloat(p.value) || 0), 0);
+  const paymentLabel: Record<string, string> = {
+    financiamento: "Financiamento", avista: "A Vista", cartao: "Cartao",
+    pix: "PIX", boleto: "Boleto", troca: "Troca", outro: "Outro",
   };
 
-  if (loading) {
-    return <div className="p-6">Carregando contrato...</div>;
+  if (loading) return <div className="p-6">Carregando...</div>;
+
+  // --- CONTRACT FORM ---
+  if (!showContract) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <FileText className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold">Gerar Contrato</h1>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Veiculo */}
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <h2 className="font-bold text-lg">Veiculo</h2>
+              <div className="space-y-2">
+                <Label>Selecione o veiculo</Label>
+                <Select value={selectedVehicle?.id || ""} onValueChange={handleSelectVehicle}>
+                  <SelectTrigger><SelectValue placeholder="Escolha um veiculo..." /></SelectTrigger>
+                  <SelectContent>
+                    {vehicles.map(v => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.title || `${v.brand} ${v.model}`} - {v.plate || "Sem placa"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedVehicle && (
+                <div className="bg-muted p-4 rounded-lg space-y-1 text-sm">
+                  <p><strong>Veiculo:</strong> {selectedVehicle.title || `${selectedVehicle.brand} ${selectedVehicle.model}`}</p>
+                  <p><strong>Placa:</strong> {selectedVehicle.plate || "-"}</p>
+                  <p><strong>Ano:</strong> {selectedVehicle.manufacturing_year}/{selectedVehicle.model_year}</p>
+                  <p><strong>RENAVAM:</strong> {selectedVehicle.renavan || "-"}</p>
+                  <p><strong>KM:</strong> {selectedVehicle.current_km?.toLocaleString() || "-"}</p>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Valor de Venda (R$)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={salePrice}
+                  onChange={e => setSalePrice(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Cliente */}
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <h2 className="font-bold text-lg">Cliente</h2>
+              <div className="space-y-2">
+                <Label>Selecione o cliente</Label>
+                <Select value={selectedCustomer?.id || ""} onValueChange={handleSelectCustomer}>
+                  <SelectTrigger><SelectValue placeholder="Escolha um cliente..." /></SelectTrigger>
+                  <SelectContent>
+                    {customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} - {c.cpf || c.cnpj || c.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedCustomer && (
+                <div className="bg-muted p-4 rounded-lg space-y-1 text-sm">
+                  <p><strong>Nome:</strong> {selectedCustomer.name}</p>
+                  <p><strong>CPF/CNPJ:</strong> {selectedCustomer.cpf || selectedCustomer.cnpj || "-"}</p>
+                  <p><strong>Email:</strong> {selectedCustomer.email}</p>
+                  <p><strong>Telefone:</strong> {selectedCustomer.phone || "-"}</p>
+                  <p><strong>Endereco:</strong> {selectedCustomer.address || "-"}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Troca */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-4">
+              <h2 className="font-bold text-lg">Veiculo de Troca</h2>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasTradeIn}
+                  onChange={e => setHasTradeIn(e.target.checked)}
+                  className="rounded"
+                />
+                Tem troca
+              </label>
+            </div>
+            {hasTradeIn && (
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Marca</Label>
+                  <Input value={tradeIn.brand} onChange={e => setTradeIn({ ...tradeIn, brand: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Modelo</Label>
+                  <Input value={tradeIn.model} onChange={e => setTradeIn({ ...tradeIn, model: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Placa</Label>
+                  <Input value={tradeIn.plate} onChange={e => setTradeIn({ ...tradeIn, plate: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>RENAVAM</Label>
+                  <Input value={tradeIn.renavan} onChange={e => setTradeIn({ ...tradeIn, renavan: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Chassis</Label>
+                  <Input value={tradeIn.chassis} onChange={e => setTradeIn({ ...tradeIn, chassis: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Motor</Label>
+                  <Input value={tradeIn.motor} onChange={e => setTradeIn({ ...tradeIn, motor: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Combustivel</Label>
+                  <Input value={tradeIn.combustivel} onChange={e => setTradeIn({ ...tradeIn, combustivel: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>KM</Label>
+                  <Input value={tradeIn.km_entrega} onChange={e => setTradeIn({ ...tradeIn, km_entrega: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cor</Label>
+                  <Input value={tradeIn.cor} onChange={e => setTradeIn({ ...tradeIn, cor: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor da Troca (R$)</Label>
+                  <Input type="number" step="0.01" value={tradeIn.value} onChange={e => setTradeIn({ ...tradeIn, value: e.target.value })} />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Formas de Pagamento */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-lg">Formas de Pagamento</h2>
+              <Button variant="outline" size="sm" onClick={addPayment}>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar
+              </Button>
+            </div>
+            {payments.map((payment, i) => (
+              <div key={i} className="grid gap-4 md:grid-cols-4 items-end border-b pb-4">
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <Select value={payment.type} onValueChange={v => updatePayment(i, "type", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="financiamento">Financiamento</SelectItem>
+                      <SelectItem value="avista">A Vista</SelectItem>
+                      <SelectItem value="cartao">Cartao</SelectItem>
+                      <SelectItem value="pix">PIX</SelectItem>
+                      <SelectItem value="boleto">Boleto</SelectItem>
+                      <SelectItem value="troca">Troca</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Descricao</Label>
+                  <Input
+                    value={payment.description}
+                    onChange={e => updatePayment(i, "description", e.target.value)}
+                    placeholder="Ex: Financiado pelo Banco X"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1 space-y-2">
+                    <Label>Valor (R$)</Label>
+                    <Input type="number" step="0.01" value={payment.value} onChange={e => updatePayment(i, "value", e.target.value)} />
+                  </div>
+                  <Button variant="destructive" size="sm" className="mt-auto" onClick={() => removePayment(i)}>X</Button>
+                </div>
+              </div>
+            ))}
+            {payments.length === 0 && (
+              <p className="text-muted-foreground text-sm text-center py-4">
+                Nenhuma forma de pagamento adicionada
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Garantia */}
+        <Card>
+          <CardContent className="p-6 space-y-4">
+            <h2 className="font-bold text-lg">Garantia</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Periodo (meses)</Label>
+                <Select value={warrantyMonths} onValueChange={setWarrantyMonths}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Sem garantia</SelectItem>
+                    <SelectItem value="1">1 mes</SelectItem>
+                    <SelectItem value="3">3 meses</SelectItem>
+                    <SelectItem value="6">6 meses</SelectItem>
+                    <SelectItem value="12">12 meses</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>KM limite</Label>
+                <Input type="number" value={warrantyKm} onChange={e => setWarrantyKm(e.target.value)} placeholder="3000" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Button size="lg" className="w-full" onClick={generateContract}>
+          <FileText className="h-5 w-5 mr-2" />
+          Gerar Contrato
+        </Button>
+      </div>
+    );
   }
 
-  const { vehicle, customer, trade_in } = contractData;
-  const today = new Date();
-  const contractNumber = "179"; // Exemplo - pode ser gerado dinamicamente
+  // --- CONTRACT PRINT VIEW ---
+  const store = storeInfo || { store_name: "NOME DA EMPRESA", cnpj: "", address: "", phone: "", email: "" };
 
   return (
     <div className="p-6">
-      <div className="print:hidden mb-4 flex justify-end">
+      <div className="print:hidden mb-4 flex gap-4 justify-end">
+        <Button variant="outline" onClick={() => setShowContract(false)}>Voltar</Button>
         <Button onClick={handlePrint} className="gap-2">
-          <Printer className="h-4 w-4" />
-          Imprimir Contrato
+          <Printer className="h-4 w-4" /> Imprimir Contrato
         </Button>
       </div>
 
       <Card className="max-w-4xl mx-auto print:shadow-none print:border-0">
-        <CardContent className="p-8 print:p-12 space-y-6">
-          {/* Cabeçalho */}
+        <CardContent className="p-8 print:p-12 space-y-6 text-sm">
+          {/* Header */}
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-xl font-bold">NOME DA EMPRESA</h1>
-              <p className="text-sm text-muted-foreground">CNPJ: XX.XXX.XXX/0001-XX</p>
-              <p className="text-sm text-muted-foreground">ENDEREÇO COMPLETO DA EMPRESA</p>
-              <p className="text-sm text-muted-foreground">Tel: (XX) XXXX-XXXX</p>
+              <h1 className="text-xl font-bold uppercase">{store.store_name}</h1>
+              {store.cnpj && <p className="text-muted-foreground">CNPJ: {store.cnpj}</p>}
+              {store.address && <p className="text-muted-foreground">{store.address}</p>}
+              {store.phone && <p className="text-muted-foreground">Tel: {store.phone}</p>}
             </div>
             <div className="text-right">
-              <p className="text-lg font-bold">CONTRATO Nº {contractNumber}</p>
-              <p className="text-sm">VENDA COM TROCA</p>
-              <div className="mt-2 text-sm">
-                <p>EMITIDO: {formatDate(today)}</p>
-                <p>CONCRETIZADO: {vehicle?.entrega || formatDate(today)}</p>
-              </div>
+              <p className="text-lg font-bold">CONTRATO DE {hasTradeIn ? "VENDA COM TROCA" : "VENDA"}</p>
+              <p className="mt-2">{formatDate(today)}</p>
             </div>
           </div>
 
-          {/* Dados do Cliente */}
+          {/* Client Data */}
           <div className="border rounded-lg p-4">
-            <h2 className="font-bold mb-4">DADOS DO CLIENTE</h2>
+            <h2 className="font-bold mb-3">DADOS DO CLIENTE</h2>
             <div className="grid grid-cols-3 gap-4">
+              <div><p className="font-semibold">NOME</p><p>{selectedCustomer!.name}</p></div>
               <div>
-                <p className="text-sm font-semibold">NOME</p>
-                <p className="text-sm">{customer?.name}</p>
+                <p className="font-semibold">{selectedCustomer!.document_type === "CNPJ" ? "CNPJ" : "CPF"}</p>
+                <p>{selectedCustomer!.cpf || selectedCustomer!.cnpj || "-"}</p>
               </div>
-              <div>
-                <p className="text-sm font-semibold">CPF</p>
-                <p className="text-sm">{customer?.cpf || "-"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">RG</p>
-                <p className="text-sm">{customer?.rg || "-"}</p>
-              </div>
+              <div><p className="font-semibold">TELEFONE</p><p>{selectedCustomer!.phone || "-"}</p></div>
             </div>
-            <div className="mt-2">
-              <p className="text-sm font-semibold">E-MAIL</p>
-              <p className="text-sm">{customer?.email}</p>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm font-semibold">ENDEREÇO</p>
-              <p className="text-sm">{customer?.address || "-"}</p>
-            </div>
+            <div className="mt-2"><p className="font-semibold">EMAIL</p><p>{selectedCustomer!.email}</p></div>
+            <div className="mt-2"><p className="font-semibold">ENDERECO</p><p>{selectedCustomer!.address || "-"}</p></div>
           </div>
 
-          {/* Veículo de Venda */}
+          {/* Sale Vehicle */}
           <div className="border rounded-lg p-4">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="font-bold">VEÍCULO DE VENDA</h2>
+            <div className="flex justify-between items-start mb-3">
+              <h2 className="font-bold">VEICULO DE VENDA</h2>
               <div className="bg-gray-700 text-white px-4 py-2 rounded">
-                <p className="text-sm">VALOR DE VENDA {formatCurrency(vehicle?.actual_sale_price)}</p>
-                <p className="text-xs">(valor por extenso)</p>
+                <p>VALOR: {formatCurrency(salePrice)}</p>
               </div>
             </div>
-            <p className="text-sm mb-4">VENDIDO PELA NOME DA EMPRESA AO CLIENTE</p>
-            
+            <p className="mb-3">Vendido pela {store.store_name} ao cliente</p>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm font-semibold">VEÍCULO</p>
-                <p className="text-sm">{vehicle?.title}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">PLACA</p>
-                <p className="text-sm">{vehicle?.plate}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">ANO</p>
-                <p className="text-sm">{vehicle?.manufacturing_year}/{vehicle?.model_year}</p>
-              </div>
+              <div><p className="font-semibold">VEICULO</p><p>{selectedVehicle!.title || `${selectedVehicle!.brand} ${selectedVehicle!.model}`}</p></div>
+              <div><p className="font-semibold">PLACA</p><p>{selectedVehicle!.plate || "-"}</p></div>
+              <div><p className="font-semibold">ANO</p><p>{selectedVehicle!.manufacturing_year}/{selectedVehicle!.model_year}</p></div>
             </div>
-
-            <div className="grid grid-cols-3 gap-4 mt-4">
-              <div>
-                <p className="text-sm font-semibold">CHASSIS</p>
-                <p className="text-sm">{vehicle?.chassis}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">COMBUSTÍVEL</p>
-                <p className="text-sm">{vehicle?.combustivel}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">MOTOR</p>
-                <p className="text-sm">{vehicle?.motor}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mt-4">
-              <div>
-                <p className="text-sm font-semibold">RENAVAM</p>
-                <p className="text-sm">{vehicle?.renavan}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">ENTREGA</p>
-                <p className="text-sm">{vehicle?.entrega}</p>
-              </div>
-              <div>
-                <p className="text-sm font-semibold">KM Entrega</p>
-                <p className="text-sm">{vehicle?.km_entrega?.toLocaleString() || vehicle?.current_km?.toLocaleString()}</p>
-              </div>
+            <div className="grid grid-cols-3 gap-4 mt-3">
+              <div><p className="font-semibold">RENAVAM</p><p>{selectedVehicle!.renavan || "-"}</p></div>
+              <div><p className="font-semibold">KM</p><p>{selectedVehicle!.current_km?.toLocaleString() || "-"}</p></div>
+              <div></div>
             </div>
           </div>
 
-          {/* Veículo de Troca */}
-          {trade_in && (
+          {/* Trade-in Vehicle */}
+          {hasTradeIn && tradeIn.brand && (
             <div className="border rounded-lg p-4">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="font-bold">VEÍCULO DE TROCA</h2>
+              <div className="flex justify-between items-start mb-3">
+                <h2 className="font-bold">VEICULO DE TROCA</h2>
                 <div className="bg-gray-700 text-white px-4 py-2 rounded">
-                  <p className="text-sm">VALOR DE COMPRA {formatCurrency(trade_in.value)}</p>
-                  <p className="text-xs">(valor por extenso)</p>
+                  <p>VALOR: {formatCurrency(tradeIn.value)}</p>
                 </div>
               </div>
-              <p className="text-sm mb-4">VENDIDO PELO CLIENTE À NOME DA EMPRESA</p>
-              
+              <p className="mb-3">Vendido pelo cliente a {store.store_name}</p>
               <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-semibold">VEÍCULO</p>
-                  <p className="text-sm">{trade_in.brand} {trade_in.model}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">PLACA</p>
-                  <p className="text-sm">{trade_in.plate}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">COR</p>
-                  <p className="text-sm">{trade_in.cor}</p>
-                </div>
+                <div><p className="font-semibold">VEICULO</p><p>{tradeIn.brand} {tradeIn.model}</p></div>
+                <div><p className="font-semibold">PLACA</p><p>{tradeIn.plate || "-"}</p></div>
+                <div><p className="font-semibold">COR</p><p>{tradeIn.cor || "-"}</p></div>
               </div>
-
-              <div className="grid grid-cols-3 gap-4 mt-4">
-                <div>
-                  <p className="text-sm font-semibold">CHASSIS</p>
-                  <p className="text-sm">{trade_in.chassis}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">COMBUSTÍVEL</p>
-                  <p className="text-sm">{trade_in.combustivel}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">MOTOR</p>
-                  <p className="text-sm">{trade_in.motor}</p>
-                </div>
+              <div className="grid grid-cols-3 gap-4 mt-3">
+                <div><p className="font-semibold">CHASSIS</p><p>{tradeIn.chassis || "-"}</p></div>
+                <div><p className="font-semibold">RENAVAM</p><p>{tradeIn.renavan || "-"}</p></div>
+                <div><p className="font-semibold">KM</p><p>{tradeIn.km_entrega || "-"}</p></div>
               </div>
-
-              <div className="grid grid-cols-3 gap-4 mt-4">
-                <div>
-                  <p className="text-sm font-semibold">RENAVAM</p>
-                  <p className="text-sm">{trade_in.renavan}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">ENTREGA</p>
-                  <p className="text-sm">{trade_in.entrega}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">KM Entrega</p>
-                  <p className="text-sm">{trade_in.km_entrega?.toLocaleString()}</p>
-                </div>
+              <div className="grid grid-cols-3 gap-4 mt-3">
+                <div><p className="font-semibold">MOTOR</p><p>{tradeIn.motor || "-"}</p></div>
+                <div><p className="font-semibold">COMBUSTIVEL</p><p>{tradeIn.combustivel || "-"}</p></div>
+                <div></div>
               </div>
             </div>
           )}
 
-          {/* Acerto Financeiro */}
+          {/* Financial Settlement */}
           <div className="border rounded-lg p-4">
-            <h2 className="font-bold mb-4">ACERTO FINANCEIRO RECEBIDO</h2>
-            <p className="text-sm mb-4">VALORES RECEBIDOS PELA NOME DA EMPRESA PAGOS PELO CLIENTE</p>
-            
-            <div className="border rounded p-4 mb-4">
-              <p className="text-sm">
-                Descrição: {formatCurrency(vehicle?.actual_sale_price)} VALOR FINANCIADO PELO BANCO
-                {trade_in && ` + ${formatCurrency(trade_in.value)} VALOR DA AVALIAÇÃO DO VEÍCULO NA TROCA`}
-              </p>
-              <p className="text-right font-bold mt-2">
-                {formatCurrency((vehicle?.actual_sale_price || 0) + (trade_in?.value || 0))}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-700 text-white p-4 rounded">
-                <h3 className="font-bold mb-2">VALOR TOTAL VENDA</h3>
-                <p className="text-xl">{formatCurrency(vehicle?.actual_sale_price)}</p>
-                <p className="text-xs">(valor por extenso)</p>
-                
-                <h3 className="font-bold mt-4 mb-2">PRODUTOS & SERVIÇOS</h3>
-                <p className="text-xl">{formatCurrency(0)}</p>
-                <p className="text-xs">(zero reais)</p>
-
-                {trade_in && (
-                  <>
-                    <h3 className="font-bold mt-4 mb-2">VALOR TOTAL TROCA</h3>
-                    <p className="text-xl">{formatCurrency(trade_in.value)}</p>
-                    <p className="text-xs">(valor por extenso)</p>
-                  </>
-                )}
+            <h2 className="font-bold mb-3">ACERTO FINANCEIRO</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between border-b pb-2">
+                <span>Valor de Venda</span>
+                <span className="font-semibold">{formatCurrency(salePrice)}</span>
               </div>
-
-              <div className="bg-gray-700 text-white p-4 rounded">
-                <h3 className="font-bold mb-2">TOTAL</h3>
-                <p className="text-xl">
-                  {formatCurrency((vehicle?.actual_sale_price || 0) - (trade_in?.value || 0))}
-                </p>
-                <p className="text-xs">(valor por extenso)</p>
+              {hasTradeIn && tradeInValue > 0 && (
+                <div className="flex justify-between border-b pb-2">
+                  <span>(-) Valor da Troca</span>
+                  <span className="font-semibold text-red-600">- {formatCurrency(tradeIn.value)}</span>
+                </div>
+              )}
+              {payments.map((p, i) => (
+                <div key={i} className="flex justify-between border-b pb-2">
+                  <span>{paymentLabel[p.type]}{p.description ? `: ${p.description}` : ""}</span>
+                  <span className="font-semibold">{formatCurrency(p.value)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between pt-2 text-lg font-bold">
+                <span>VALOR FINAL A PAGAR</span>
+                <span>{formatCurrency(salePriceNum - tradeInValue)}</span>
               </div>
             </div>
           </div>
 
-          {/* Certificado de Garantia */}
+          {/* Warranty */}
+          {parseInt(warrantyMonths) > 0 && (
+            <div className="border rounded-lg p-4">
+              <h2 className="font-bold mb-3">CERTIFICADO DE GARANTIA</h2>
+              <p className="mb-2">
+                <strong>Periodo:</strong> {warrantyMonths} {parseInt(warrantyMonths) === 1 ? "mes" : "meses"} ou {parseInt(warrantyKm).toLocaleString()} km (o que ocorrer primeiro)
+              </p>
+              <p className="leading-relaxed">
+                Tem o presente certificado a finalidade de formalizar as condicoes de garantia do veiculo descrito e identificado
+                neste documento. A garantia refere-se a vicios e inadequacoes do motor (MOTOR e CAMBIO) e a parte eletrica
+                (CENTRAL ELETRONICA e MODULO DE INJECAO), que venham a apresentar defeitos de fabricacao. Durante o
+                periodo, nao estao sujeitos a garantia os itens de desgaste natural: direcao, polias, bicos e mangueiras, juntas e aneis
+                de vedacao, correias, valvulas, bateria, velas, luzes, rolamentos, amortecedores, buchas, bandejas, pivos, terminais,
+                coifas, retentores, discos e pastilhas de freio, tambores e lonas, embreagem.
+                NAO estao dentro desta garantia qualquer defeito causado por acidentes, colisoes, uso inadequado, negligencia,
+                modificacoes, alteracoes, reparos improprios, instalacao de pecas nao genuinas.
+                Caso o veiculo apresente algum vicio dentro do prazo estabelecido, devera ser comunicado por escrito a
+                revenda no maximo em 24 (vinte e quatro) horas apos ter sido detectado.
+              </p>
+            </div>
+          )}
+
+          {/* Delivery Receipt */}
           <div className="border rounded-lg p-4">
-            <h2 className="font-bold mb-4">CERTIFICADO DE GARANTIA</h2>
-            <p className="text-sm leading-relaxed">
-              Tem o presente certificado a finalidade de formalizar as condições de garantia do veículo descrito e identificado
-              neste documento. A garantia refere-se a vícios e inadequações do motor (MOTOR e CÂMBIO) e a parte elétrica
-              (CENTRAL ELETRÔNICA e MÓDULO DE INJEÇÃO), que venham a apresentar defeitos de fabricação. Durante o
-              período, não estão sujeitos a garantia os itens: direção de manutenção e polia, bicos e mangueiras, juntas e anéis
-              de vedação, correias de distribuição, correção de válvulas, bateria, velas, luzes, eixo carredam, rolamentos,
-              amortecedores, buchas, bandejas, pivôs, terminais, coifas, retentores, discos e pastilhas de freio, tambores e lonas,
-              embreagem, juntas do motor (quando envolvidas em reparos). Os dâmetros seguros: todos os componentes
-              internos exceto conjunto de embreagem. NÃO estão dentro desta garantia qualquer defeito causado por acidentes,
-              colisões, uso inadequado, negligência, modificações, alterações, reparos impróprios, instalação de peças não
-              genuínas que tenham surgido da má utilização pelo COMPRADOR. Esta garantia, também não cobre danos
-              causados por perda de óleo por negligência, uso de combustível inadequado, falta de manutenção, ou
-              manutenção de mecânica preventiva não autorizada. Esta garantia perderá efeito, caso o veículo seja lavado ou
-              higienizado em estabelecimentos não autorizados. Caso o veículo apresente algum vício que o cliente venha
-              apresentar dentro dos prazos estabelecidos acima, deverá ser comunicado por escrito ao termo inequívoca a
-              REVENDA, no máximo em 24 (vinte e quatro) horas após ter sido detectado.
+            <h2 className="font-bold mb-3">RECIBO DE ENTREGA DO VEICULO</h2>
+            <p className="leading-relaxed">
+              Declaro para os devidos fins que recebi nesta data o veiculo descrito nesta negociacao, bem como as suas chaves e
+              documentos, no estado em que se encontra. Declaro ainda ter vistoriado o veiculo, estando o mesmo em perfeito
+              estado de funcionamento, inclusive com todos os acessorios originais.
             </p>
           </div>
 
-          {/* Recibo de Entrega */}
+          {/* Responsibility Term */}
           <div className="border rounded-lg p-4">
-            <h2 className="font-bold mb-4">RECIBO DE ENTREGA DO VEÍCULO</h2>
-            <p className="text-sm leading-relaxed">
-              Declaro para os devidos fins que recebi nesta data o veículo descrito nesta negociação, bem como as suas chaves e
-              documentos, no estado em que se encontra.
-              Declaro ainda ter vistoriado o veículo descrito nesta negociação, estando o mesmo em perfeito estado de
-              funcionamento, inclusive portanto todas as acessórios originários, marcas, através de nota visual, tangível e
-              exterior do mesmo.
+            <h2 className="font-bold mb-3">TERMO DE RESPONSABILIDADE</h2>
+            <p className="leading-relaxed">
+              Declaro estar ciente da minha responsabilidade quanto ao veiculo ora negociado, no que tange a questao civil,
+              criminal e eventuais multas no transito, IPVA, alienacao e qualquer outro direito legal que incida sobre o veiculo,
+              a partir desta data ate a data da efetiva transferencia junto ao Departamento de Transito, me comprometendo a
+              quitar os mesmos.
             </p>
           </div>
 
-          {/* Termos de Responsabilidade */}
-          <div className="border rounded-lg p-4">
-            <h2 className="font-bold mb-4">TERMO DE RESPONSABILIDADE CIVIL, CRIMINAL E MULTAS DE TRÂNSITO</h2>
-            <p className="text-sm leading-relaxed mb-4">
-              Declaro estar ciente da minha responsabilidade quanto ao veículo ora negociado, no que tange a questão civil,
-              criminal e eventuais multas no trânsito, sendo referentes a IPVA, alienação e qualquer outro direito legal que incida
-              sobre o veículo, referente ao período a partir desta data até a data da efetiva transferência junto ao Departamento
-              de Trânsito, me comprometendo a quitar os mesmos.
-            </p>
-            
-            <h2 className="font-bold mb-4">TERMO DE RESPONSABILIDADE CIVIL, CRIMINAL E MULTAS DE TRÂNSITO (VENDA)</h2>
-            <p className="text-sm leading-relaxed">
-              Declaro estar ciente da minha responsabilidade quanto ao veículo ora negociado, no que tange a questão civil,
-              criminal e eventuais multas no trânsito, sendo referentes a IPVA, alienação e qualquer outro direito legal que incida
-              sobre o veículo, referente ao período a partir desta data até a data da efetiva transferência junto ao Departamento
-              de Trânsito, me comprometendo a quitar os mesmos.
-            </p>
-          </div>
-
-          {/* Assinaturas */}
+          {/* Signatures */}
           <div className="mt-12">
             <p className="text-center mb-8">DE ACORDO</p>
-            <p className="text-center mb-8">Fortaleza/CE, ___ de _____________ de _______</p>
-
+            <p className="text-center mb-8">{formatDate(today)}</p>
             <div className="grid grid-cols-2 gap-8">
               <div className="text-center">
-                <div className="border-t border-black pt-2">
-                  <p className="font-bold">{customer?.name}</p>
-                  <p className="text-sm">CPF: {customer?.cpf}</p>
+                <div className="border-t border-black pt-2 mt-16">
+                  <p className="font-bold">{selectedCustomer!.name}</p>
+                  <p>{selectedCustomer!.document_type === "CNPJ" ? "CNPJ" : "CPF"}: {selectedCustomer!.cpf || selectedCustomer!.cnpj || "-"}</p>
                 </div>
               </div>
-              
               <div className="text-center">
-                <div className="border-t border-black pt-2">
-                  <p className="font-bold">NOME DA EMPRESA</p>
-                  <p className="text-sm">CNPJ: XX.XXX.XXX/0001-XX</p>
+                <div className="border-t border-black pt-2 mt-16">
+                  <p className="font-bold uppercase">{store.store_name}</p>
+                  {store.cnpj && <p>CNPJ: {store.cnpj}</p>}
                 </div>
               </div>
             </div>
-
             <div className="grid grid-cols-2 gap-8 mt-12">
               <div className="text-center">
                 <p className="font-bold mb-4">TESTEMUNHA 1</p>
-                <div className="border-t border-black pt-2">
-                  <p className="text-sm">Nome:</p>
-                  <p className="text-sm">CPF:</p>
+                <div className="border-t border-black pt-2 mt-8">
+                  <p>Nome: ___________________________</p>
+                  <p>CPF: ____________________________</p>
                 </div>
               </div>
-              
               <div className="text-center">
                 <p className="font-bold mb-4">TESTEMUNHA 2</p>
-                <div className="border-t border-black pt-2">
-                  <p className="text-sm">Nome:</p>
-                  <p className="text-sm">CPF:</p>
+                <div className="border-t border-black pt-2 mt-8">
+                  <p>Nome: ___________________________</p>
+                  <p>CPF: ____________________________</p>
                 </div>
               </div>
             </div>

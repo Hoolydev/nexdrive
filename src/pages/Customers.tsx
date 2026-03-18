@@ -168,7 +168,7 @@ export default function Customers() {
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingCustomer(null);
-              setFormData({ name: "", email: "", phone: "", cpf: "", address: "" });
+              setFormData({ name: "", email: "", phone: "", document_type: "CPF", cpf: "", cnpj: "", address: "" });
               setDocuments([]);
             }}>
               <Plus className="mr-2 h-4 w-4" />
