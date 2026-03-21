@@ -2,98 +2,254 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ═══════════════════════════════════════════════════════════════════
+   DATIFY SaaS Design System — CSS Tokens
+   NexDrive | Brand: #2563EB Primary Blue
+   ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    /* ── Shadcn/Radix semantic tokens ── */
+    --background: 210 40% 98%;       /* #F8FAFC app bg */
+    --foreground: 222 47% 11%;       /* #0F172A text primary */
 
-    --card: 0 0% 100%;
+    --card: 0 0% 100%;               /* #FFFFFF surface */
     --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
+    --primary: 221 83% 53%;          /* #2563EB brand primary */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 32% 91%;
+    --secondary: 210 40% 96%;        /* #F1F5F9 */
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%; /* #64748B text secondary */
 
     --accent: 221 83% 53%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 60%;        /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
+    --border: 214 32% 91%;           /* #E2E8F0 */
     --input: 214 32% 91%;
     --ring: 221 83% 53%;
 
-    --radius: 0.5rem;
+    /* UI radius tokens (shadcn base) */
+    --radius: 0.875rem;              /* 14px = radius-md default */
 
-    --sidebar-background: 222 47% 11%;
+    /* ── Brand Tokens (Datify Blue) ── */
+    --color-dark-base: #0F172A;
+    --color-brand-primary: #2563EB;
+    --color-brand-secondary: #1D4ED8;
+    --color-brand-light: #3B82F6;
+    --color-bg-app: #F8FAFC;
+    --color-surface: #FFFFFF;
+    --color-border: #E2E8F0;
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #64748B;
+    --color-text-muted: #94A3B8;
+    --color-success: #22C55E;
+    --color-warning: #F59E0B;
+    --color-danger: #EF4444;
+    --color-info: #3B82F6;
+
+    /* ── Typography ── */
+    --font-display: 'Onest', system-ui, sans-serif;
+    --font-ui: 'Onest', system-ui, sans-serif;
+    --font-body: 'Onest', system-ui, sans-serif;
+
+    /* ── Radius Scale ── */
+    --radius-xs: 6px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --radius-full: 9999px;
+
+    /* ── Spacing ── */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+
+    /* ── Shadows ── */
+    --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.06);
+    --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 4px 20px rgba(15, 23, 42, 0.10);
+    --shadow-lg: 0 8px 40px rgba(37, 99, 235, 0.15);
+    --shadow-brand: 0 4px 24px rgba(37, 99, 235, 0.25);
+
+    /* ── Layout ── */
+    --navbar-height: 64px;
+    --sidebar-width: 240px;
+
+    /* ── Sidebar (dark always) ── */
+    --sidebar-background: 222 47% 11%;   /* #0F172A */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 20%;
+    --sidebar-accent: 215 28% 17%;       /* #1E293B */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 222 47% 20%;
+    --sidebar-border: 215 28% 17%;
     --sidebar-ring: 221 83% 53%;
   }
 
+  /* No dark mode override required — system is a light-mode system */
   .dark {
     --background: 222 47% 11%;
-    --foreground: 0 0% 100%;
-
-    --card: 222 47% 15%;
-    --card-foreground: 0 0% 100%;
-
-    --popover: 222 47% 15%;
-    --popover-foreground: 0 0% 100%;
-
+    --foreground: 0 0% 95%;
+    --card: 222 47% 11%;
+    --card-foreground: 0 0% 95%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 0 0% 95%;
     --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 222 47% 20%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 222 47% 20%;
-    --muted-foreground: 215 20% 65%;
-
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 16% 65%;
     --accent: 221 83% 53%;
     --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 63% 31%;
+    --destructive: 0 63% 45%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 222 47% 20%;
-    --input: 222 47% 20%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
     --ring: 221 83% 53%;
-
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 0 0% 100%;
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 20%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 222 47% 20%;
+    --sidebar-accent: 222 47% 11%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 215 28% 14%;
     --sidebar-ring: 221 83% 53%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+
+  .font-display { font-family: var(--font-display); }
+  .font-ui      { font-family: var(--font-ui); }
+  .font-body    { font-family: var(--font-body); }
+}
+
+/* ── DATIFY Utility Classes ── */
+@layer utilities {
+  /* Shadows */
+  .shadow-xs    { box-shadow: var(--shadow-xs); }
+  .shadow-brand { box-shadow: var(--shadow-brand); }
+
+  /* Brand gradient */
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, var(--color-brand-primary) 0%, var(--color-brand-light) 100%);
+  }
+  .bg-dark-gradient {
+    background: linear-gradient(180deg, var(--color-dark-base) 0%, #172554 100%);
+  }
+  .text-brand-gradient {
+    background: linear-gradient(135deg, var(--color-brand-primary) 0%, var(--color-brand-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Radius shortcuts */
+  .rounded-xs { border-radius: var(--radius-xs); }
+  .rounded-sm { border-radius: var(--radius-sm); }
+  .rounded-md { border-radius: var(--radius-md); }
+  .rounded-lg { border-radius: var(--radius-lg); }
+  .rounded-xl { border-radius: var(--radius-xl); }
+
+  /* Micro-interactions */
+  .hover-lift {
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-press:active {
+    transform: scale(0.97);
+    transition: transform 100ms ease;
+  }
+
+  /* Active nav underline */
+  .nav-active-underline {
+    position: relative;
+  }
+  .nav-active-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-brand-primary);
+    border-radius: 2px;
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, #E2E8F0 25%, #F8FAFC 50%, #E2E8F0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-wave 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-wave {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Scroll animation helpers */
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-fade-in {
+      animation: fadeIn 200ms ease-in-out;
+    }
+    .animate-slide-up {
+      animation: slideUp 250ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 }
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #E2E8F0; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }

@@ -242,8 +242,8 @@ export type Database = {
           price: number | null
           purchase_price: number | null
           renavan: string | null
-          report_url: string | null
           sale_date: string | null
+          show_in_store: boolean | null
           sold: boolean | null
           stock_entry_date: string | null
           title: string | null
@@ -266,9 +266,9 @@ export type Database = {
           plate?: string | null
           price?: number | null
           purchase_price?: number | null
-          renavan?: string | null
           report_url?: string | null
           sale_date?: string | null
+          show_in_store?: boolean | null
           sold?: boolean | null
           stock_entry_date?: string | null
           title?: string | null
@@ -291,9 +291,9 @@ export type Database = {
           plate?: string | null
           price?: number | null
           purchase_price?: number | null
-          renavan?: string | null
           report_url?: string | null
           sale_date?: string | null
+          show_in_store?: boolean | null
           sold?: boolean | null
           stock_entry_date?: string | null
           title?: string | null
@@ -696,6 +696,10 @@ export type Database = {
           phone: string | null
           email: string | null
           address: string | null
+          custom_domain: string | null
+          hero_template: string | null
+          theme_palette: string | null
+          font_family: string | null
           instagram_url: string | null
           facebook_url: string | null
           description: string | null
@@ -716,6 +720,10 @@ export type Database = {
           phone?: string | null
           email?: string | null
           address?: string | null
+          custom_domain?: string | null
+          hero_template?: string | null
+          theme_palette?: string | null
+          font_family?: string | null
           instagram_url?: string | null
           facebook_url?: string | null
           description?: string | null
@@ -736,6 +744,10 @@ export type Database = {
           phone?: string | null
           email?: string | null
           address?: string | null
+          custom_domain?: string | null
+          hero_template?: string | null
+          theme_palette?: string | null
+          font_family?: string | null
           instagram_url?: string | null
           facebook_url?: string | null
           description?: string | null

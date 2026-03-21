@@ -1,22 +1,26 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { hapticFeedback } from "@/utils/haptic";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Wrench, DollarSign, Search, ChevronsUpDown, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, Wrench, DollarSign, Search, ChevronsUpDown, Check, Filter, ArrowRight, ShoppingCart, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import VehicleCosts from "@/components/VehicleCosts";
 import { MarketResearch } from "@/components/MarketResearch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { fipeApi, type FipeBrand, type FipeModel, type FipeYear } from "@/integrations/fipe/client";
 import { VehicleImageCarousel } from "@/components/VehicleImageCarousel";
+import { GedAttachments } from "@/components/GedAttachments";
 import { cn } from "@/lib/utils";
 
 type Product = {
@@ -29,6 +33,12 @@ type Product = {
   model: string | null;
   plate: string | null;
   renavan: string | null;
+  chassis: string | null;
+  color: string | null;
+  fuel: string | null;
+  transmission: string | null;
+  doors: number | null;
+  is_marketplace_visible: boolean;
   manufacturing_year: number | null;
   model_year: number | null;
   fipe_price: number | null;
@@ -40,6 +50,9 @@ type Product = {
   stock_entry_date: string;
   sale_date: string | null;
   sold: boolean;
+  status: string | null;
+  show_in_store: boolean;
+  fiscal_grace_until?: string;
 };
 
 export default function Products() {
@@ -54,6 +67,12 @@ export default function Products() {
     model: "",
     plate: "",
     renavan: "",
+    chassis: "",
+    color: "",
+    fuel: "",
+    transmission: "",
+    doors: "",
+    is_marketplace_visible: true,
     manufacturing_year: "",
     model_year: "",
     description: "",
@@ -66,6 +85,7 @@ export default function Products() {
     sold: false,
     sale_date: "",
     customerId: "",
+    status: "active",
   });
   const [vehicleImages, setVehicleImages] = useState<File[]>([]);
   const [reportFile, setReportFile] = useState<File | null>(null);
@@ -95,6 +115,72 @@ export default function Products() {
 
   // Market Research modal
   const [marketOpen, setMarketOpen] = useState(false);
+
+  // Status filter
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Status transition state
+  const [sellDialogProduct, setSellDialogProduct] = useState<Product | null>(null);
+  const [sellForm, setSellForm] = useState({
+    actual_sale_price: "",
+    buyerQuery: "",
+    buyerId: "",
+  });
+  const [fiscalGraceActive, setFiscalGraceActive] = useState(false);
+  const [entitySearchResults, setEntitySearchResults] = useState<{ id: string; name: string }[]>([]);
+  const [entitySearchLoading, setEntitySearchLoading] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+
+  // Reverter Venda (Super_Admin)
+  const [revertDialogProduct, setRevertDialogProduct] = useState<Product | null>(null);
+  const [revertConfirmText, setRevertConfirmText] = useState("");
+  const [revertLoading, setRevertLoading] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  // AI Pricing state
+  type PricingData = {
+    avg_price: number | null;
+    min_price: number | null;
+    max_price: number | null;
+    sample_count: number | null;
+    source: string | null;
+    scraped_at: string | null;
+  };
+  const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
+  const [pricingData, setPricingData] = useState<PricingData | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingVehicleTitle, setPricingVehicleTitle] = useState("");
+
+  const VEHICLE_STATUS_OPTIONS = [
+    { value: "shadow_inventory", label: "Pré-estoque", color: "bg-gray-500" },
+    { value: "quarantine", label: "Quarentena", color: "bg-yellow-500" },
+    { value: "active", label: "Em Estoque", color: "bg-green-500" },
+    { value: "sold", label: "Vendido", color: "bg-blue-500" },
+    { value: "archived", label: "Concluído", color: "bg-slate-400" },
+  ] as const;
+
+  const STATUS_FILTER_TABS = [
+    { value: "all", label: "Todos" },
+    { value: "active", label: "Em Estoque" },
+    { value: "quarantine", label: "Quarentena" },
+    { value: "sold", label: "Vendido" },
+    { value: "archived", label: "Concluído" },
+  ] as const;
+
+  const getStatusBadge = (status: string | null) => {
+    const opt = VEHICLE_STATUS_OPTIONS.find(o => o.value === status);
+    if (!opt) return <Badge variant="outline">Indefinido</Badge>;
+    return (
+      <Badge className={`${opt.color} text-white hover:${opt.color}`}>
+        {opt.label}
+      </Badge>
+    );
+  };
+
+  const filteredProducts = statusFilter === "all"
+    ? products
+    : products.filter(p => p.status === statusFilter);
 
   const loadBrands = async () => {
     try {
@@ -126,6 +212,13 @@ export default function Products() {
     loadCustomers();
     loadBrands();
     loadAllVehicleCosts();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUserId(user.id);
+        const role = user.app_metadata?.role as string | undefined;
+        setIsSuperAdmin(role === 'Super_Admin' || role === 'super_admin');
+      }
+    });
   }, []);
 
   const handleBrandChange = async (brandId: string) => {
@@ -211,6 +304,7 @@ export default function Products() {
       if (error) throw error;
       const formattedData = (data || []).map(product => ({
         ...product,
+        show_in_store: product.show_in_store ?? true,
         vehicle_images: (Array.isArray(product.vehicle_images) ? product.vehicle_images : []) as string[]
       }));
       setProducts(formattedData as Product[]);
@@ -284,10 +378,12 @@ export default function Products() {
   const resetForm = () => {
     setFormData({
       title: "", brand: "", model: "", plate: "", renavan: "",
+      chassis: "", color: "", fuel: "", transmission: "", doors: "",
+      is_marketplace_visible: true,
       manufacturing_year: "", model_year: "", description: "",
       price: "", fipe_price: "", current_km: "", purchase_price: "",
       actual_sale_price: "", stock_entry_date: new Date().toISOString().split('T')[0],
-      sold: false, sale_date: "", customerId: "",
+      sold: false, sale_date: "", customerId: "", status: "active",
     });
     setVehicleImages([]);
     setReportFile(null);
@@ -327,6 +423,12 @@ export default function Products() {
         model: formData.model || null,
         plate: formData.plate || null,
         renavan: formData.renavan || null,
+        chassis: formData.chassis || null,
+        color: formData.color || null,
+        fuel: formData.fuel || null,
+        transmission: formData.transmission || null,
+        doors: formData.doors ? parseInt(formData.doors) : null,
+        is_marketplace_visible: formData.is_marketplace_visible,
         manufacturing_year: formData.manufacturing_year ? parseInt(formData.manufacturing_year) : null,
         model_year: formData.model_year ? parseInt(formData.model_year) : null,
         description: formData.description || null,
@@ -337,6 +439,7 @@ export default function Products() {
         actual_sale_price: formData.actual_sale_price ? parseFloat(formData.actual_sale_price) : null,
         stock_entry_date: formData.stock_entry_date,
         sold: formData.sold,
+        status: formData.status || 'active',
         sale_date: formData.sold ? (formData.sale_date || new Date().toISOString().split('T')[0]) : null,
         vehicle_images: imageUrls.length > 0 ? imageUrls : (editingProduct?.vehicle_images || []),
         report_url: reportUrl || (editingProduct?.report_url || null),
@@ -391,6 +494,12 @@ export default function Products() {
       model: product.model || "",
       plate: product.plate || "",
       renavan: product.renavan || "",
+      chassis: product.chassis || "",
+      color: product.color || "",
+      fuel: product.fuel || "",
+      transmission: product.transmission || "",
+      doors: product.doors?.toString() || "",
+      is_marketplace_visible: product.is_marketplace_visible !== false,
       manufacturing_year: product.manufacturing_year?.toString() || "",
       model_year: product.model_year?.toString() || "",
       description: product.description || "",
@@ -403,6 +512,7 @@ export default function Products() {
       sold: product.sold || false,
       sale_date: product.sale_date?.split('T')[0] || "",
       customerId: "",
+      status: product.status || "active",
     });
     setVehicleImages([]);
     setReportFile(null);
@@ -412,6 +522,281 @@ export default function Products() {
     setModels([]);
     setYears([]);
     setOpen(true);
+  };
+
+  const updateVehicleStatus = async (vehicleId: string, newStatus: string, extraData?: Record<string, unknown>) => {
+    setStatusUpdating(vehicleId);
+    try {
+      const updatePayload: Record<string, unknown> = { status: newStatus, ...extraData };
+      if (newStatus === "sold") {
+        updatePayload.sold = true;
+        updatePayload.sale_date = new Date().toISOString().split("T")[0];
+      } else {
+        updatePayload.sold = false;
+        if (newStatus === "active") {
+          updatePayload.sale_date = null;
+        }
+      }
+      const { error } = await (supabase as any)
+        .from("products")
+        .update(updatePayload)
+        .eq("id", vehicleId);
+      if (error) throw error;
+      toast.success("Status atualizado!");
+      loadProducts();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setStatusUpdating(null);
+    }
+  };
+
+  const handleToggleStoreVisibility = async (productId: string, show: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ show_in_store: show })
+        .eq("id", productId);
+        
+      if (error) throw error;
+      setProducts(products.map(p => p.id === productId ? { ...p, show_in_store: show } : p));
+      toast.success(show ? "Veículo visível na loja pública" : "Veículo oculto da loja pública");
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const searchEntities = async (query: string) => {
+    if (query.length < 2) { setEntitySearchResults([]); return; }
+    setEntitySearchLoading(true);
+    try {
+      const { data } = await (supabase as any)
+        .from("entities")
+        .select("id, name")
+        .ilike("name", `%${query}%`)
+        .limit(10);
+      setEntitySearchResults(data || []);
+    } catch {
+      setEntitySearchResults([]);
+    } finally {
+      setEntitySearchLoading(false);
+    }
+  };
+
+  const handleConfirmSell = async () => {
+    if (!sellDialogProduct) return;
+    if (!sellForm.actual_sale_price) {
+      toast.error("Informe o valor de venda");
+      return;
+    }
+    const salePrice = parseFloat(sellForm.actual_sale_price.replace(/\D/g, "")) || 0;
+    const extraFields: Record<string, unknown> = { actual_sale_price: salePrice };
+    if (fiscalGraceActive) {
+      extraFields.fiscal_grace_until = new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0];
+    }
+    await updateVehicleStatus(sellDialogProduct.id, "sold", extraFields);
+    hapticFeedback('heavy');
+    setSellDialogProduct(null);
+    setSellForm({ actual_sale_price: "", buyerQuery: "", buyerId: "" });
+    setFiscalGraceActive(false);
+    setEntitySearchResults([]);
+  };
+
+  const handleRevertSale = async () => {
+    if (!revertDialogProduct) return;
+    if (revertConfirmText !== "REVERTER") {
+      toast.error("Digite REVERTER para confirmar");
+      return;
+    }
+    setRevertLoading(true);
+    try {
+      // 1. Volta veículo para quarentena
+      const { error: productError } = await (supabase as any)
+        .from("products")
+        .update({
+          status: "quarantine",
+          sold: false,
+          actual_sale_price: null,
+          sale_date: null,
+        })
+        .eq("id", revertDialogProduct.id);
+      if (productError) throw productError;
+
+      // 2. Cancela transações financeiras abertas do veículo
+      await (supabase as any)
+        .from("financial_transactions")
+        .update({ status: "cancelled" })
+        .eq("vehicle_id", revertDialogProduct.id)
+        .in("status", ["open", "overdue"]);
+
+      toast.error("Venda revertida — Veículo retornou para Quarentena. Transações canceladas.", {
+        duration: 6000,
+      });
+      setRevertDialogProduct(null);
+      setRevertConfirmText("");
+      loadProducts();
+    } catch (error: any) {
+      toast.error("Erro ao reverter venda: " + error.message);
+    } finally {
+      setRevertLoading(false);
+    }
+  };
+
+  const handleAIPricing = async (product: Product) => {
+    setPricingVehicleTitle(
+      product.title || `${product.brand ?? ""} ${product.model ?? ""}`.trim()
+    );
+    setPricingData(null);
+    setPricingDialogOpen(true);
+    setPricingLoading(true);
+    try {
+      const { data, error } = await (supabase as any)
+        .from("pricing_intelligence_cache")
+        .select("avg_price, min_price, max_price, sample_count, source, scraped_at")
+        .eq("brand", product.brand)
+        .eq("model", product.model)
+        .eq("year_model", product.model_year)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setPricingData(data);
+      } else {
+        setPricingDialogOpen(false);
+        toast.info(
+          "Dados de precificação não disponíveis para este modelo. Atualize via pesquisa de mercado."
+        );
+      }
+    } catch {
+      setPricingDialogOpen(false);
+      toast.error("Erro ao buscar dados de precificação.");
+    } finally {
+      setPricingLoading(false);
+    }
+  };
+
+  const getStatusTransitionButtons = (product: Product) => {
+    const isUpdating = statusUpdating === product.id;
+    const status = product.status;
+    const buttons: React.ReactNode[] = [];
+
+    if (status === "shadow_inventory") {
+      buttons.push(
+        <Button
+          key="to-quarantine"
+          size="sm"
+          variant="outline"
+          className="text-xs h-7 gap-1"
+          disabled={isUpdating}
+          onClick={() => updateVehicleStatus(product.id, "quarantine")}
+        >
+          <ArrowRight className="h-3 w-3" />
+          Mover p/ Quarentena
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="to-active"
+          size="sm"
+          variant="outline"
+          className="text-xs h-7 gap-1 text-blue-700 border-blue-300 hover:bg-blue-50"
+          disabled={isUpdating}
+          onClick={() => updateVehicleStatus(product.id, "active")}
+        >
+          <ArrowRight className="h-3 w-3" />
+          Ativar
+        </Button>
+      );
+    } else if (status === "quarantine") {
+      buttons.push(
+        <Button
+          key="to-active"
+          size="sm"
+          variant="outline"
+          className="text-xs h-7 gap-1 text-blue-700 border-blue-300 hover:bg-blue-50"
+          disabled={isUpdating}
+          onClick={() => updateVehicleStatus(product.id, "active")}
+        >
+          <ArrowRight className="h-3 w-3" />
+          Ativar
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="to-shadow"
+          size="sm"
+          variant="outline"
+          className="text-xs h-7 gap-1"
+          disabled={isUpdating}
+          onClick={() => updateVehicleStatus(product.id, "shadow_inventory")}
+        >
+          Voltar p/ Sombra
+        </Button>
+      );
+    } else if (status === "active") {
+      buttons.push(
+        <Button
+          key="to-sold"
+          size="sm"
+          variant="outline"
+          className="text-xs h-7 gap-1 text-green-700 border-green-300 hover:bg-green-50"
+          disabled={isUpdating}
+          onClick={() => {
+            setSellDialogProduct(product);
+            setSellForm({ actual_sale_price: product.actual_sale_price?.toString() || "", buyerQuery: "", buyerId: "" });
+            setFiscalGraceActive(false);
+          }}
+        >
+          <ShoppingCart className="h-3 w-3" />
+          Marcar Vendido
+        </Button>
+      );
+    } else if (status === "sold") {
+      buttons.push(
+        <Button
+          key="to-archived"
+          size="sm"
+          variant="outline"
+          className="text-xs h-7 gap-1"
+          disabled={isUpdating}
+          onClick={() => updateVehicleStatus(product.id, "archived")}
+        >
+          Arquivar
+        </Button>
+      );
+      buttons.push(
+        <Button
+          key="to-active-revert"
+          size="sm"
+          variant="outline"
+          className="text-xs h-7 gap-1 text-blue-700 border-blue-300 hover:bg-blue-50"
+          disabled={isUpdating}
+          onClick={() => updateVehicleStatus(product.id, "active")}
+        >
+          Reverter p/ Ativo
+        </Button>
+      );
+      if (isSuperAdmin) {
+        buttons.push(
+          <Button
+            key="revert-sale"
+            size="sm"
+            variant="outline"
+            className="text-xs h-7 gap-1 text-red-700 border-red-300 hover:bg-red-50"
+            disabled={isUpdating}
+            onClick={() => {
+              setRevertDialogProduct(product);
+              setRevertConfirmText("");
+            }}
+          >
+            ↩ Reverter Venda
+          </Button>
+        );
+      }
+    }
+
+    return buttons;
   };
 
   if (loading) {
@@ -533,8 +918,8 @@ export default function Products() {
                 </Select>
               </div>
 
-              {/* Placa e Renavan */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Placa, Renavan e Chassi */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="plate">Placa</Label>
                   <Input
@@ -557,6 +942,74 @@ export default function Products() {
                     placeholder="00000000000"
                     maxLength={11}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="chassis">Chassi (VIN)</Label>
+                  <Input
+                    id="chassis"
+                    value={formData.chassis}
+                    onChange={(e) => setFormData({ ...formData, chassis: e.target.value.toUpperCase() })}
+                    placeholder="9BWZZZ377VT004251"
+                    maxLength={17}
+                  />
+                </div>
+              </div>
+
+              {/* Combustível, Cor, Câmbio e Portas */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fuel">Combustível</Label>
+                  <Select value={formData.fuel} onValueChange={(val) => setFormData({ ...formData, fuel: val })}>
+                    <SelectTrigger id="fuel">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="flex">Flex</SelectItem>
+                      <SelectItem value="gasolina">Gasolina</SelectItem>
+                      <SelectItem value="etanol">Etanol</SelectItem>
+                      <SelectItem value="diesel">Diesel</SelectItem>
+                      <SelectItem value="eletrico">Elétrico</SelectItem>
+                      <SelectItem value="hibrido">Híbrido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="color">Cor</Label>
+                  <Input
+                    id="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    placeholder="Prata"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="transmission">Câmbio</Label>
+                  <Select value={formData.transmission} onValueChange={(val) => setFormData({ ...formData, transmission: val })}>
+                    <SelectTrigger id="transmission">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="automatico">Automático</SelectItem>
+                      <SelectItem value="cvt">CVT</SelectItem>
+                      <SelectItem value="semi-automatico">Semi-automático</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="doors">Portas</Label>
+                  <Select value={formData.doors} onValueChange={(val) => setFormData({ ...formData, doors: val })}>
+                    <SelectTrigger id="doors">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="4">4</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -781,10 +1234,31 @@ export default function Products() {
                 </div>
               )}
 
+              {/* Visível na Vitrine Pública */}
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_marketplace_visible"
+                  checked={formData.is_marketplace_visible}
+                  onCheckedChange={(v) => setFormData({ ...formData, is_marketplace_visible: v })}
+                />
+                <Label htmlFor="is_marketplace_visible" className="cursor-pointer">Visível na Vitrine Pública</Label>
+              </div>
+
               <Button type="submit" className="w-full" disabled={uploadingImages}>
                 {uploadingImages ? "Enviando..." : editingProduct ? "Atualizar Veículo" : "Cadastrar Veículo"}
               </Button>
             </form>
+
+            {editingProduct && currentUserId && (
+              <>
+                <Separator className="my-4" />
+                <GedAttachments
+                  attachableType="vehicle"
+                  attachableId={editingProduct.id}
+                  userId={currentUserId}
+                />
+              </>
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -818,16 +1292,269 @@ export default function Products() {
         </DialogContent>
       </Dialog>
 
+      {/* Marcar Vendido Dialog */}
+      <Dialog open={!!sellDialogProduct} onOpenChange={(o) => { if (!o) { setSellDialogProduct(null); setEntitySearchResults([]); setFiscalGraceActive(false); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-green-600" />
+              Marcar Veiculo como Vendido
+            </DialogTitle>
+            <DialogDescription>
+              {sellDialogProduct
+                ? `${sellDialogProduct.brand || ""} ${sellDialogProduct.model || ""} — ${sellDialogProduct.plate || ""}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label>Valor de Venda (R$) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Ex: 45000"
+                value={sellForm.actual_sale_price}
+                onChange={(e) => setSellForm({ ...sellForm, actual_sale_price: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Comprador (Entidade)</Label>
+              <div className="relative">
+                <Input
+                  placeholder="Buscar entidade pelo nome..."
+                  value={sellForm.buyerQuery}
+                  onChange={(e) => {
+                    setSellForm({ ...sellForm, buyerQuery: e.target.value, buyerId: "" });
+                    searchEntities(e.target.value);
+                  }}
+                />
+                {entitySearchResults.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {entitySearchResults.map((entity) => (
+                      <button
+                        key={entity.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                        onClick={() => {
+                          setSellForm({ ...sellForm, buyerQuery: entity.name, buyerId: entity.id });
+                          setEntitySearchResults([]);
+                        }}
+                      >
+                        {entity.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {entitySearchLoading && (
+                  <p className="text-xs text-muted-foreground mt-1">Buscando...</p>
+                )}
+              </div>
+              {sellForm.buyerId && (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  Entidade selecionada
+                </p>
+              )}
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3 bg-yellow-50 border-yellow-200">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Registrar Trava Fiscal (15 dias)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Bloqueia saída fiscal por 15 dias a partir da venda.
+                </p>
+              </div>
+              <Switch
+                checked={fiscalGraceActive}
+                onCheckedChange={setFiscalGraceActive}
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setSellDialogProduct(null); setEntitySearchResults([]); setFiscalGraceActive(false); }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={handleConfirmSell}
+                disabled={!sellForm.actual_sale_price || statusUpdating === sellDialogProduct?.id}
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Confirmar Venda
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reverter Venda Dialog (Super_Admin only) */}
+      <Dialog
+        open={!!revertDialogProduct}
+        onOpenChange={(o) => { if (!o) { setRevertDialogProduct(null); setRevertConfirmText(""); } }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-700 flex items-center gap-2">
+              ↩ Reverter Venda
+            </DialogTitle>
+            <DialogDescription>
+              {revertDialogProduct
+                ? `${revertDialogProduct.brand || ""} ${revertDialogProduct.model || ""} — ${revertDialogProduct.plate || ""}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800 space-y-2">
+              <p className="font-semibold">⚠️ Ação Administrativa</p>
+              <p>
+                Esta ação é irreversível no sentido contábil. Você está revertendo a venda deste veículo.
+                Todas as transações financeiras vinculadas serão marcadas como &quot;cancelled&quot; e o veículo
+                retornará para Quarentena.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="revert-confirm">
+                Digite <strong>REVERTER</strong> para confirmar
+              </Label>
+              <Input
+                id="revert-confirm"
+                value={revertConfirmText}
+                onChange={(e) => setRevertConfirmText(e.target.value)}
+                placeholder="REVERTER"
+                className="font-mono"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setRevertDialogProduct(null); setRevertConfirmText(""); }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleRevertSale}
+                disabled={revertConfirmText !== "REVERTER" || revertLoading}
+              >
+                {revertLoading ? "Revertendo..." : "↩ Confirmar Reversão"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Filter Tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {STATUS_FILTER_TABS.map((tab) => (
+          <Button
+            key={tab.value}
+            variant={statusFilter === tab.value ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter(tab.value)}
+          >
+            {tab.label}
+            {tab.value === "all"
+              ? ` (${products.length})`
+              : ` (${products.filter(p => p.status === tab.value).length})`}
+          </Button>
+        ))}
+      </div>
+
+      {/* AI Pricing Dialog */}
+      <Dialog open={pricingDialogOpen} onOpenChange={setPricingDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-600" />
+              Precificação com IA
+            </DialogTitle>
+            <DialogDescription>{pricingVehicleTitle}</DialogDescription>
+          </DialogHeader>
+          {pricingLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : pricingData ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="bg-red-50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">Mínimo</p>
+                  <p className="font-bold text-red-600">
+                    {pricingData.min_price
+                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricingData.min_price)
+                      : "—"}
+                  </p>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-200">
+                  <p className="text-xs text-muted-foreground">Média</p>
+                  <p className="font-bold text-blue-700 text-lg">
+                    {pricingData.avg_price
+                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricingData.avg_price)
+                      : "—"}
+                  </p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">Máximo</p>
+                  <p className="font-bold text-green-600">
+                    {pricingData.max_price
+                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricingData.max_price)
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+              <div className="text-sm text-muted-foreground space-y-1">
+                {pricingData.sample_count && (
+                  <p>Baseado em <strong>{pricingData.sample_count}</strong> anúncios</p>
+                )}
+                {pricingData.source && <p>Fonte: <strong>{pricingData.source}</strong></p>}
+                {pricingData.scraped_at && (
+                  <p>
+                    Atualizado em:{" "}
+                    <strong>
+                      {new Date(pricingData.scraped_at).toLocaleDateString("pt-BR")}
+                    </strong>
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       {/* Grid de Veículos */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {products.map((product) => (
-          <Card key={product.id} className={product.sold ? "opacity-60" : ""}>
+        {filteredProducts.map((product) => (
+          <Card key={product.id} className={product.status === "sold" || product.status === "archived" ? "opacity-60" : ""}>
             <CardHeader>
               <VehicleImageCarousel images={product.vehicle_images || []} className="mb-4" />
-              <CardTitle>
-                {product.brand} {product.model}
-                {product.sold && <span className="ml-2 text-sm font-normal text-muted-foreground">(Vendido)</span>}
-              </CardTitle>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">
+                    {product.brand} {product.model}
+                  </CardTitle>
+                  {getStatusBadge(product.status)}
+                </div>
+                <div className="flex items-center space-x-2 bg-slate-50 border border-slate-100 p-2 rounded-md">
+                  <Switch
+                    checked={product.show_in_store}
+                    onCheckedChange={(checked) => handleToggleStoreVisibility(product.id, checked)}
+                  />
+                  <Label className="text-xs text-muted-foreground mr-1">Visível na Loja</Label>
+                </div>
+              </div>
+              {product.fiscal_grace_until && new Date(product.fiscal_grace_until) > new Date() && (() => {
+                const graceDays = Math.ceil((new Date(product.fiscal_grace_until).getTime() - Date.now()) / 86400000);
+                return (
+                  <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 border">
+                    ⚠️ Trava Fiscal: {graceDays}d restantes
+                  </Badge>
+                );
+              })()}
             </CardHeader>
             <CardContent className="space-y-3">
               {product.title && <p className="text-sm font-medium">{product.title}</p>}
@@ -875,7 +1602,19 @@ export default function Products() {
               })()}
 
               {product.price && (
-                <p className="text-2xl font-bold text-primary">{formatCurrency(product.price)}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-bold text-primary">{formatCurrency(product.price)}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    onClick={() => handleAIPricing(product)}
+                    title="Precificar com IA"
+                  >
+                    <TrendingUp className="h-3 w-3" />
+                    Precificar com IA
+                  </Button>
+                </div>
               )}
               {product.description && (
                 <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
@@ -888,6 +1627,16 @@ export default function Products() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+              {/* Status Transition Buttons */}
+              {(() => {
+                const transitionBtns = getStatusTransitionButtons(product);
+                if (transitionBtns.length === 0) return null;
+                return (
+                  <div className="flex flex-wrap gap-2 pt-1 border-t mt-1">
+                    {transitionBtns}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         ))}

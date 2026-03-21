@@ -19,6 +19,10 @@ interface StoreSettings {
   instagram_url: string | null;
   facebook_url: string | null;
   description: string | null;
+  custom_domain: string | null;
+  hero_template: string | null;
+  theme_palette: string | null;
+  font_family: string | null;
 }
 
 export type StoreContextType = { settings: StoreSettings };
@@ -33,16 +37,24 @@ export default function StoreLayout() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!slug) return;
-    supabase.from("store_settings")
-      .select("*")
-      .eq("slug", slug)
-      .eq("active", true)
-      .maybeSingle()
-      .then(({ data }) => {
-        setSettings(data);
-        setLoading(false);
-      });
+    const hostname = window.location.hostname;
+    const isCustomDomain = hostname !== "localhost" && !hostname.includes("nexdrive") && !hostname.includes("vercel.app");
+
+    let query = supabase.from("store_settings").select("*").eq("active", true);
+
+    if (isCustomDomain) {
+      query = query.eq("custom_domain", hostname);
+    } else if (slug) {
+      query = query.eq("slug", slug);
+    } else {
+      setLoading(false);
+      return;
+    }
+
+    query.maybeSingle().then(({ data }) => {
+      setSettings(data as any);
+      setLoading(false);
+    });
   }, [slug]);
 
   if (loading) {
@@ -64,11 +76,21 @@ export default function StoreLayout() {
     );
   }
 
-  const primaryColor = settings.primary_color || "#1e40af";
+  const getThemeColor = (palette: string | null, custom: string | null) => {
+     if (palette === 'emerald') return '#10b981';
+     if (palette === 'slate') return '#334155';
+     if (palette === 'rose') return '#e11d48';
+     if (palette === 'orange') return '#ea580c';
+     if (palette === 'nexdrive-blue') return '#1e40af';
+     return custom || "#1e40af";
+  };
+  
+  const primaryColor = getThemeColor(settings.theme_palette, settings.primary_color);
   const secondaryColor = settings.secondary_color || "#ffffff";
+  const fontFamilyClass = settings.font_family === "outfit" ? "font-outfit" : settings.font_family === "playfair" ? "font-playfair font-serif" : settings.font_family === "roboto" ? "font-roboto" : "font-sans";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className={`min-h-screen flex flex-col bg-gray-50 ${fontFamilyClass}`}>
       {/* Header */}
       <header style={{ backgroundColor: primaryColor, color: secondaryColor }} className="shadow-md">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">

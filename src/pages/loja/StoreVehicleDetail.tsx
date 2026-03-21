@@ -74,9 +74,12 @@ export default function StoreVehicleDetail() {
   const prevImage = () => setCurrentImage(i => (i - 1 + images.length) % images.length);
   const nextImage = () => setCurrentImage(i => (i + 1) % images.length);
 
+  const isCustomUrl = window.location.hostname === settings.custom_domain;
+  const storeUrl = isCustomUrl ? '/' : `/loja/${settings.slug}`;
+
   return (
     <div className="space-y-6">
-      <Link to={`/loja/${settings.slug}`} className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700">
+      <Link to={storeUrl} className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700">
         <ArrowLeft className="h-4 w-4" />Voltar para a loja
       </Link>
 

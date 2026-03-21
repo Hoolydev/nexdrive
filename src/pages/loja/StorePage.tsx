@@ -38,6 +38,7 @@ export default function StorePage() {
       .select("id, brand, model, title, price, fipe_price, current_km, manufacturing_year, model_year, image_url, vehicle_images, description")
       .eq("user_id", settings.user_id)
       .eq("sold", false)
+      .eq("show_in_store", true)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setVehicles((data as unknown as Vehicle[]) || []);
@@ -78,11 +79,39 @@ export default function StorePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Nossos Veiculos</h2>
-        <p className="text-gray-500">{vehicles.length} veiculos disponiveis</p>
-      </div>
+    <div className="space-y-6 md:space-y-10">
+      {/* Dynamic Hero Section */}
+      {settings.hero_template === "classic" && (
+        <div className="bg-white rounded-2xl shadow-sm border p-8 md:p-12 mb-8 flex flex-col md:flex-row items-center gap-8">
+          <div className="flex-1 space-y-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-800 leading-tight">
+              Encontre o veículo dos seus sonhos
+            </h2>
+            <p className="text-lg text-gray-500 max-w-lg">
+              Oferecemos uma seleção premium com procedência garantida e as melhores condições de financiamento.
+            </p>
+          </div>
+          <div className="flex-1 flex justify-center w-full">
+            <Car className="h-48 w-48 text-gray-100" />
+          </div>
+        </div>
+      )}
+
+      {settings.hero_template === "minimal" && (
+        <div className="text-left mb-8 md:mt-6 border-b pb-8">
+          <h2 className="text-4xl font-light text-gray-800 mb-3 tracking-tight">Estoque Selecionado</h2>
+          <p className="text-gray-500 uppercase tracking-widest text-sm font-semibold">{vehicles.length} Veículos Constam Disponíveis</p>
+        </div>
+      )}
+
+      {(!settings.hero_template || settings.hero_template === "modern") && (
+        <div className="text-center mb-8 py-10 bg-gradient-to-b from-transparent to-gray-50 rounded-2xl">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 tracking-tight">Nossos Veículos</h2>
+          <p className="text-gray-500 text-lg bg-white inline-block px-4 py-1.5 rounded-full shadow-sm border">
+            {vehicles.length} veículos disponíveis em nosso estoque
+          </p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-3">

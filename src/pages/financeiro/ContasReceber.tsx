@@ -1,341 +1,567 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
-import { FinanceiroNav } from "@/components/financeiro/FinanceiroNav";
 import { toast } from "sonner";
-import { Plus, ArrowUpCircle, CheckCircle, Trash2, Eye } from "lucide-react";
+import { AlertTriangle, ArrowUpCircle, CheckCircle2, User } from "lucide-react";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-const paymentMethodLabel: Record<string, string> = {
-  cash: "Dinheiro", financing: "Financiamento", credit_card: "Cartao de Credito",
-  pix: "PIX", boleto: "Boleto", other: "Outro",
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return "-";
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("pt-BR");
 };
 
-const statusBadge = (status: string) => {
-  switch (status) {
-    case "paid": return <Badge className="bg-green-500">Pago</Badge>;
-    case "partial": return <Badge className="bg-yellow-500">Parcial</Badge>;
-    case "overdue": return <Badge variant="destructive">Vencido</Badge>;
-    default: return <Badge variant="secondary">Pendente</Badge>;
-  }
-};
+const todayStr = () => new Date().toISOString().split("T")[0];
 
-interface Receivable {
-  id: string;
-  description: string;
-  total_amount: number;
-  installments: number | null;
-  payment_method: string | null;
-  status: string;
-  notes: string | null;
-  product_id: string | null;
-  customer_id: string | null;
-  created_at: string;
-  products?: { brand: string | null; model: string | null } | null;
-  customers?: { name: string } | null;
+function daysDiff(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dateStr + "T00:00:00");
+  return Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-interface Installment {
+function startOfWeek(): string {
+  const d = new Date();
+  const day = d.getDay();
+  d.setDate(d.getDate() - day);
+  return d.toISOString().split("T")[0];
+}
+
+function endOfWeek(): string {
+  const d = new Date();
+  const day = d.getDay();
+  d.setDate(d.getDate() + (6 - day));
+  return d.toISOString().split("T")[0];
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type TxStatus = "open" | "partial" | "paid" | "overdue" | "cancelled";
+
+type QuickFilter = "all" | "today" | "week" | "overdue";
+
+interface FinancialTx {
   id: string;
-  installment_number: number;
   amount: number;
   due_date: string;
   payment_date: string | null;
-  status: string;
+  status: TxStatus;
+  description: string | null;
+  type: string;
+  seller_entity_id: string | null;
+  entity: { id: string; name: string } | null;
+  vehicle: { id: string; title: string | null; plate: string | null } | null;
+  seller: { id: string; name: string } | null;
+  account: { id: string; name: string; dre_mapping_key: string | null } | null;
 }
 
+// ---------------------------------------------------------------------------
+// Status badge
+// ---------------------------------------------------------------------------
+
+function StatusBadge({ status }: { status: TxStatus }) {
+  switch (status) {
+    case "open":
+      return <Badge className="bg-blue-500 text-white">Aberto</Badge>;
+    case "overdue":
+      return <Badge className="bg-red-500 text-white">Vencido</Badge>;
+    case "partial":
+      return <Badge className="bg-yellow-500 text-white">Parcial</Badge>;
+    case "paid":
+      return <Badge className="bg-green-500 text-white">Pago</Badge>;
+    case "cancelled":
+      return <Badge className="bg-gray-400 text-white">Cancelado</Badge>;
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function ContasReceber() {
-  const [items, setItems] = useState<Receivable[]>([]);
-  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
+  const [items, setItems] = useState<FinancialTx[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [installmentsDialogOpen, setInstallmentsDialogOpen] = useState(false);
-  const [selectedInstallments, setSelectedInstallments] = useState<Installment[]>([]);
-  const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
-  const [filter, setFilter] = useState("all");
-  const [form, setForm] = useState({
-    description: "", total_amount: "", installments: "1", payment_method: "cash",
-    customer_id: "", due_date: "", notes: "",
+
+  // Filters
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterDueDateFrom, setFilterDueDateFrom] = useState("");
+  const [filterDueDateTo, setFilterDueDateTo] = useState("");
+  const [filterEntity, setFilterEntity] = useState("");
+  const [filterVehicle, setFilterVehicle] = useState("");
+
+  // Receber dialog
+  const [receberOpen, setReceberOpen] = useState(false);
+  const [receberItem, setReceberItem] = useState<FinancialTx | null>(null);
+  const [receberDate, setReceberDate] = useState(todayStr());
+  const [receberMethod, setReceberMethod] = useState("PIX");
+  const [receberSubmitting, setReceberSubmitting] = useState(false);
+
+  // Inadimplência threshold (days overdue to show red badge)
+  const OVERDUE_THRESHOLD_DAYS = 7;
+
+  // ---------------------------------------------------------------------------
+  // Load
+  // ---------------------------------------------------------------------------
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await (supabase as any)
+        .from("financial_transactions")
+        .select(`
+          id, amount, due_date, payment_date, status, description, type, seller_entity_id,
+          entity:entity_id (id, name),
+          vehicle:vehicle_id (id, title, plate),
+          seller:seller_entity_id (id, name),
+          account:account_category_id (id, name, dre_mapping_key)
+        `)
+        .eq("user_id", user.id)
+        .eq("type", "income")
+        .is("deleted_at", null)
+        .order("due_date", { ascending: true });
+
+      if (error) throw error;
+      setItems((data || []) as FinancialTx[]);
+    } catch (error: any) {
+      toast.error("Erro ao carregar contas: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ---------------------------------------------------------------------------
+  // Quick filter logic
+  // ---------------------------------------------------------------------------
+
+  const today = todayStr();
+
+  const applyQuickFilter = (item: FinancialTx): boolean => {
+    switch (quickFilter) {
+      case "today":
+        return item.due_date === today;
+      case "week":
+        return item.due_date >= startOfWeek() && item.due_date <= endOfWeek();
+      case "overdue":
+        return (item.status === "open" || item.status === "overdue") && item.due_date < today;
+      default:
+        return true;
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Filtered items
+  // ---------------------------------------------------------------------------
+
+  const filtered = items.filter((item) => {
+    if (!applyQuickFilter(item)) return false;
+    if (filterStatus !== "all" && item.status !== filterStatus) return false;
+    if (filterDueDateFrom && item.due_date < filterDueDateFrom) return false;
+    if (filterDueDateTo && item.due_date > filterDueDateTo) return false;
+    if (filterEntity && !(item.entity?.name?.toLowerCase().includes(filterEntity.toLowerCase()))) return false;
+    if (filterVehicle) {
+      const plate = item.vehicle?.plate?.toLowerCase() || "";
+      const title = item.vehicle?.title?.toLowerCase() || "";
+      const q = filterVehicle.toLowerCase();
+      if (!plate.includes(q) && !title.includes(q)) return false;
+    }
+    return true;
   });
 
-  useEffect(() => { load(); }, []);
+  // ---------------------------------------------------------------------------
+  // Overdue alert
+  // ---------------------------------------------------------------------------
 
-  const load = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  const overdueItems = items.filter(
+    (i) => (i.status === "open" || i.status === "overdue") && i.due_date < today
+  );
 
-    const [recRes, custRes] = await Promise.all([
-      supabase.from("accounts_receivable").select("*, products(brand, model), customers(name)").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("customers").select("id, name").eq("user_id", user.id),
-    ]);
+  // ---------------------------------------------------------------------------
+  // Totals
+  // ---------------------------------------------------------------------------
 
-    setItems((recRes.data as unknown as Receivable[]) || []);
-    setCustomers(custRes.data || []);
-    setLoading(false);
+  const totalAReceber = items
+    .filter((i) => i.status === "open" || i.status === "partial")
+    .reduce((s, i) => s + Number(i.amount), 0);
+
+  const totalVencido = items
+    .filter((i) => (i.status === "open" || i.status === "overdue") && i.due_date < today)
+    .reduce((s, i) => s + Number(i.amount), 0);
+
+  const totalRecebidoPeriodo = items
+    .filter((i) => i.status === "paid" && i.payment_date)
+    .reduce((s, i) => s + Number(i.amount), 0);
+
+  // ---------------------------------------------------------------------------
+  // Receber
+  // ---------------------------------------------------------------------------
+
+  const openReceber = (item: FinancialTx) => {
+    setReceberItem(item);
+    setReceberDate(todayStr());
+    setReceberMethod("PIX");
+    setReceberOpen(true);
   };
 
-  const filteredItems = filter === "all" ? items : items.filter(i => i.status === filter);
-
-  const save = async () => {
-    if (!form.description.trim() || !form.total_amount || !form.due_date) {
-      toast.error("Preencha descricao, valor e data");
-      return;
+  const handleReceber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!receberItem) return;
+    setReceberSubmitting(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("financial_transactions")
+        .update({
+          status: "paid",
+          payment_date: receberDate,
+          payment_method: receberMethod,
+        })
+        .eq("id", receberItem.id);
+      if (error) throw error;
+      toast.success("Recebimento registrado com sucesso!");
+      setReceberOpen(false);
+      setReceberItem(null);
+      load();
+    } catch (error: any) {
+      toast.error("Erro ao registrar recebimento: " + error.message);
+    } finally {
+      setReceberSubmitting(false);
     }
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const totalAmount = parseFloat(form.total_amount);
-    const numInstallments = parseInt(form.installments) || 1;
-
-    const { data: receivable, error } = await supabase.from("accounts_receivable").insert({
-      user_id: user.id,
-      description: form.description.trim(),
-      total_amount: totalAmount,
-      installments: numInstallments,
-      payment_method: form.payment_method,
-      customer_id: form.customer_id || null,
-      notes: form.notes || null,
-    }).select().single();
-
-    if (error || !receivable) { toast.error("Erro ao cadastrar"); return; }
-
-    // Create installments
-    const installmentAmount = Math.round((totalAmount / numInstallments) * 100) / 100;
-    const baseDate = new Date(form.due_date + "T00:00:00");
-    const installmentRows = [];
-
-    for (let i = 0; i < numInstallments; i++) {
-      const dueDate = new Date(baseDate);
-      dueDate.setMonth(dueDate.getMonth() + i);
-      installmentRows.push({
-        receivable_id: receivable.id,
-        installment_number: i + 1,
-        amount: i === numInstallments - 1 ? Math.round((totalAmount - installmentAmount * (numInstallments - 1)) * 100) / 100 : installmentAmount,
-        due_date: dueDate.toISOString().split("T")[0],
-      });
-    }
-
-    await supabase.from("receivable_installments").insert(installmentRows);
-
-    toast.success(`Conta cadastrada com ${numInstallments} parcela(s)`);
-    setDialogOpen(false);
-    setForm({ description: "", total_amount: "", installments: "1", payment_method: "cash", customer_id: "", due_date: "", notes: "" });
-    load();
   };
 
-  const viewInstallments = async (receivable: Receivable) => {
-    setSelectedReceivable(receivable);
-    const { data } = await supabase.from("receivable_installments")
-      .select("*")
-      .eq("receivable_id", receivable.id)
-      .order("installment_number");
-    setSelectedInstallments(data || []);
-    setInstallmentsDialogOpen(true);
-  };
-
-  const markInstallmentPaid = async (installmentId: string, receivableId: string) => {
-    await supabase.from("receivable_installments").update({
-      status: "paid",
-      payment_date: new Date().toISOString().split("T")[0],
-    }).eq("id", installmentId);
-
-    // Check if all installments are paid
-    const { data: remaining } = await supabase.from("receivable_installments")
-      .select("id").eq("receivable_id", receivableId).neq("status", "paid");
-
-    if (remaining && remaining.length === 0) {
-      await supabase.from("accounts_receivable").update({ status: "paid" }).eq("id", receivableId);
-    } else {
-      await supabase.from("accounts_receivable").update({ status: "partial" }).eq("id", receivableId);
-    }
-
-    toast.success("Parcela marcada como paga");
-    if (selectedReceivable) viewInstallments(selectedReceivable);
-    load();
-  };
-
-  const remove = async (id: string) => {
-    if (!confirm("Remover esta conta?")) return;
-    await supabase.from("accounts_receivable").delete().eq("id", id);
-    toast.success("Conta removida");
-    load();
-  };
-
-  const total = filteredItems.reduce((s, i) => s + Number(i.total_amount), 0);
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <ArrowUpCircle className="h-8 w-8 text-green-500" />
-        <h1 className="text-3xl font-bold">Contas a Receber</h1>
-      </div>
-
-      <FinanceiroNav />
-
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-2">
-          {["all", "pending", "partial", "overdue", "paid"].map(s => (
-            <Button key={s} variant={filter === s ? "default" : "outline"} size="sm" onClick={() => setFilter(s)}>
-              {s === "all" ? "Todas" : s === "pending" ? "Pendentes" : s === "partial" ? "Parcial" : s === "overdue" ? "Vencidas" : "Pagas"}
-            </Button>
-          ))}
+        <div>
+          <h1 className="text-3xl font-bold">Contas a Receber</h1>
+          <p className="text-muted-foreground text-sm">Receitas e valores a receber</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" />Nova Conta</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nova Conta a Receber</DialogTitle>
-              <DialogDescription>Cadastre uma nova receita</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Descricao *</Label>
-                <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Valor Total (R$) *</Label>
-                  <Input type="number" step="0.01" value={form.total_amount} onChange={e => setForm({ ...form, total_amount: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Parcelas</Label>
-                  <Input type="number" min="1" value={form.installments} onChange={e => setForm({ ...form, installments: e.target.value })} />
-                </div>
-              </div>
-              {parseInt(form.installments) > 1 && form.total_amount && (
-                <p className="text-sm text-muted-foreground">
-                  {form.installments}x de {formatCurrency(parseFloat(form.total_amount) / parseInt(form.installments))}
-                </p>
-              )}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Forma de Pagamento</Label>
-                  <Select value={form.payment_method} onValueChange={v => setForm({ ...form, payment_method: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(paymentMethodLabel).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Primeiro Vencimento *</Label>
-                  <Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
-                </div>
-              </div>
-              <div>
-                <Label>Cliente</Label>
-                <Select value={form.customer_id} onValueChange={v => setForm({ ...form, customer_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Observacoes</Label>
-                <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
-              </div>
-              <Button className="w-full" onClick={save}>Cadastrar</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
 
-      <div className="bg-muted rounded-lg p-3 text-center">
-        <p className="text-sm text-muted-foreground">Total {filter === "all" ? "" : `(${filter})`}</p>
-        <p className="text-2xl font-bold text-green-600">{formatCurrency(total)}</p>
+      {/* Inadimplência alert */}
+      {overdueItems.length > 0 && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-red-700">
+              {overdueItems.length} {overdueItems.length === 1 ? "conta vencida" : "contas vencidas"} (inadimplência)
+            </p>
+            <p className="text-sm text-red-600">
+              Total inadimplente: {formatCurrency(overdueItems.reduce((s, i) => s + Number(i.amount), 0))}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Totals bar */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-blue-50 rounded-xl p-4 text-center">
+          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide mb-1">Total a Receber</p>
+          <p className="text-xl font-bold text-blue-700">{formatCurrency(totalAReceber)}</p>
+        </div>
+        <div className="bg-red-50 rounded-xl p-4 text-center">
+          <p className="text-xs text-red-600 font-medium uppercase tracking-wide mb-1">Total Vencido</p>
+          <p className="text-xl font-bold text-red-700">{formatCurrency(totalVencido)}</p>
+        </div>
+        <div className="bg-green-50 rounded-xl p-4 text-center">
+          <p className="text-xs text-green-600 font-medium uppercase tracking-wide mb-1">Recebido no Período</p>
+          <p className="text-xl font-bold text-green-700">{formatCurrency(totalRecebidoPeriodo)}</p>
+        </div>
       </div>
 
+      {/* Quick filters */}
+      <div className="flex flex-wrap gap-2">
+        {([
+          { key: "all", label: "Todos" },
+          { key: "today", label: "Vencendo Hoje" },
+          { key: "week", label: "Esta Semana" },
+          { key: "overdue", label: "Vencidos" },
+        ] as { key: QuickFilter; label: string }[]).map((qf) => (
+          <Button
+            key={qf.key}
+            variant={quickFilter === qf.key ? "default" : "outline"}
+            size="sm"
+            onClick={() => setQuickFilter(qf.key)}
+          >
+            {qf.label}
+            {qf.key === "overdue" && overdueItems.length > 0 && (
+              <Badge className="ml-2 bg-red-500 text-white text-[10px] h-4 min-w-4 px-1">
+                {overdueItems.length}
+              </Badge>
+            )}
+          </Button>
+        ))}
+      </div>
+
+      {/* Advanced filters */}
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="space-y-1">
+          <Label className="text-xs">Status</Label>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-36 h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="open">Aberto</SelectItem>
+              <SelectItem value="overdue">Vencido</SelectItem>
+              <SelectItem value="partial">Parcial</SelectItem>
+              <SelectItem value="paid">Pago</SelectItem>
+              <SelectItem value="cancelled">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs">Vencimento de</Label>
+          <Input
+            type="date"
+            className="w-40 h-9"
+            value={filterDueDateFrom}
+            onChange={(e) => setFilterDueDateFrom(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs">até</Label>
+          <Input
+            type="date"
+            className="w-40 h-9"
+            value={filterDueDateTo}
+            onChange={(e) => setFilterDueDateTo(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs">Cliente / Entidade</Label>
+          <Input
+            className="w-44 h-9"
+            placeholder="Buscar entidade..."
+            value={filterEntity}
+            onChange={(e) => setFilterEntity(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs">Veículo (placa/nome)</Label>
+          <Input
+            className="w-40 h-9"
+            placeholder="Buscar veículo..."
+            value={filterVehicle}
+            onChange={(e) => setFilterVehicle(e.target.value)}
+          />
+        </div>
+
+        {(filterStatus !== "all" || filterDueDateFrom || filterDueDateTo || filterEntity || filterVehicle) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 text-xs"
+            onClick={() => {
+              setFilterStatus("all");
+              setFilterDueDateFrom("");
+              setFilterDueDateTo("");
+              setFilterEntity("");
+              setFilterVehicle("");
+            }}
+          >
+            Limpar filtros
+          </Button>
+        )}
+      </div>
+
+      {/* Table */}
       <Card>
         <CardContent className="p-0">
-          {loading ? <p className="p-6">Carregando...</p> : (
+          {loading ? (
+            <p className="p-6 text-center text-muted-foreground">Carregando...</p>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Descricao</TableHead>
+                  <TableHead>Descrição</TableHead>
                   <TableHead>Cliente</TableHead>
+                  <TableHead>Veículo</TableHead>
+                  <TableHead>Categoria DRE</TableHead>
+                  <TableHead>Vendedor</TableHead>
                   <TableHead>Valor</TableHead>
-                  <TableHead>Parcelas</TableHead>
-                  <TableHead>Pagamento</TableHead>
+                  <TableHead>Vencimento</TableHead>
+                  <TableHead>Recebimento</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredItems.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhuma conta encontrada</TableCell></TableRow>
-                ) : filteredItems.map(item => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">
-                      {item.description}
-                      {item.products && <span className="text-xs text-muted-foreground ml-1">({item.products.brand} {item.products.model})</span>}
-                    </TableCell>
-                    <TableCell>{item.customers?.name || "-"}</TableCell>
-                    <TableCell className="font-bold">{formatCurrency(item.total_amount)}</TableCell>
-                    <TableCell>{item.installments || 1}x</TableCell>
-                    <TableCell>{item.payment_method ? paymentMethodLabel[item.payment_method] || item.payment_method : "-"}</TableCell>
-                    <TableCell>{statusBadge(item.status)}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="sm" onClick={() => viewInstallments(item)}>
-                        <Eye className="h-4 w-4 mr-1" />Parcelas
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => remove(item.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-10">
+                      Nenhuma conta encontrada
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filtered.map((item) => {
+                    const isOverdue =
+                      (item.status === "open" || item.status === "overdue") &&
+                      item.due_date < today;
+                    const daysOverdue = isOverdue ? daysDiff(item.due_date) : 0;
+                    const showOverdueBadge = isOverdue && daysOverdue >= OVERDUE_THRESHOLD_DAYS;
+
+                    return (
+                      <TableRow key={item.id} className={isOverdue ? "bg-red-50/40" : undefined}>
+                        <TableCell className="font-medium max-w-[180px]">
+                          <div className="truncate">{item.description || "—"}</div>
+                          {showOverdueBadge && (
+                            <Badge className="bg-red-600 text-white text-[10px] mt-1 whitespace-nowrap">
+                              VENCIDO há {daysOverdue} {daysOverdue === 1 ? "dia" : "dias"}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.entity?.name || <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.vehicle ? (
+                            <span>
+                              {item.vehicle.plate && (
+                                <Badge variant="outline" className="mr-1 text-xs font-mono">
+                                  {item.vehicle.plate}
+                                </Badge>
+                              )}
+                              <span className="text-muted-foreground text-xs">{item.vehicle.title}</span>
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {item.account?.name || "—"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.seller ? (
+                            <div className="flex items-center gap-1.5">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              <span>{item.seller.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-bold text-green-600">
+                          {formatCurrency(item.amount)}
+                        </TableCell>
+                        <TableCell className={isOverdue ? "text-red-600 font-semibold" : ""}>
+                          {formatDate(item.due_date)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(item.payment_date)}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={item.status} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {(item.status === "open" || item.status === "overdue" || item.status === "partial") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs h-8 border-green-400 text-green-700 hover:bg-green-50"
+                              onClick={() => openReceber(item)}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                              Receber
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
 
-      {/* Installments Dialog */}
-      <Dialog open={installmentsDialogOpen} onOpenChange={setInstallmentsDialogOpen}>
-        <DialogContent className="max-w-lg">
+      {/* Receber Dialog */}
+      <Dialog open={receberOpen} onOpenChange={setReceberOpen}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Parcelas - {selectedReceivable?.description}</DialogTitle>
-            <DialogDescription>{selectedReceivable ? formatCurrency(selectedReceivable.total_amount) + ` em ${selectedReceivable.installments || 1}x` : ""}</DialogDescription>
+            <DialogTitle>Registrar Recebimento</DialogTitle>
+            <DialogDescription>
+              {receberItem?.description} — {receberItem ? formatCurrency(receberItem.amount) : ""}
+            </DialogDescription>
           </DialogHeader>
-          <Separator />
-          <div className="space-y-2 max-h-[400px] overflow-y-auto">
-            {selectedInstallments.map(inst => (
-              <div key={inst.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div>
-                  <p className="font-medium">Parcela {inst.installment_number}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Vencimento: {new Date(inst.due_date + "T00:00:00").toLocaleDateString("pt-BR")}
-                    {inst.payment_date && ` | Pago em: ${new Date(inst.payment_date + "T00:00:00").toLocaleDateString("pt-BR")}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">{formatCurrency(inst.amount)}</span>
-                  {inst.status === "paid" ? (
-                    <Badge className="bg-green-500">Pago</Badge>
-                  ) : (
-                    <Button size="sm" variant="outline" onClick={() => markInstallmentPaid(inst.id, selectedReceivable!.id)}>
-                      <CheckCircle className="h-4 w-4 mr-1" />Pagar
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+
+          <form onSubmit={handleReceber} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="receber_date">Data do Recebimento</Label>
+              <Input
+                id="receber_date"
+                type="date"
+                value={receberDate}
+                onChange={(e) => setReceberDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Forma de Pagamento</Label>
+              <Select value={receberMethod} onValueChange={setReceberMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PIX">PIX</SelectItem>
+                  <SelectItem value="TED">TED</SelectItem>
+                  <SelectItem value="Boleto">Boleto</SelectItem>
+                  <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="Cartão">Cartão</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setReceberOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                disabled={receberSubmitting}
+              >
+                {receberSubmitting ? "Registrando..." : "Confirmar"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,0 +1,14 @@
+{
+  "name": "NexDrive - Gestão Automotiva",
+  "short_name": "NexDrive",
+  "description": "Gestão automotiva completa para concessionárias",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563EB",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "https://i.postimg.cc/8cznx498/Nex-Drive-Logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "https://i.postimg.cc/8cznx498/Nex-Drive-Logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
