@@ -155,6 +155,10 @@ Total Investido: R$ ${((vehicle.purchase_price || 0) + totalCosts).toLocaleStrin
     case "add_vehicle": {
       const { brand, model, purchase_price, plate, current_km, manufacturing_year, model_year } = args as any;
 
+      if (typeof brand !== "string" || typeof model !== "string" || typeof purchase_price !== "number") {
+        return "Erro de validação: 'brand' e 'model' devem ser texto, e 'purchase_price' deve ser um número válido.";
+      }
+
       const { data, error } = await supabase
         .from("products")
         .insert({
@@ -275,6 +279,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const webhookSecret = Deno.env.get("WEBHOOK_SECRET");
+    const url = new URL(req.url);
+    const secretParam = url.searchParams.get("secret");
+    const authHeader = req.headers.get("Authorization");
+    
+    // Validate Webhook Secret if configured
+    if (webhookSecret && secretParam !== webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid webhook secret" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

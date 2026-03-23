@@ -11,6 +11,19 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const webhookSecret = Deno.env.get("WEBHOOK_SECRET");
+    const url = new URL(req.url);
+    const secretParam = url.searchParams.get("secret");
+    const authHeader = req.headers.get("Authorization");
+    
+    // Validate Webhook Secret if configured
+    if (webhookSecret && secretParam !== webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid webhook secret" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

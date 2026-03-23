@@ -101,9 +101,9 @@ export default function ContasPagar() {
         .from("financial_transactions")
         .select(`
           id, amount, due_date, payment_date, status, description, type,
-          entity:entity_id (id, name),
-          vehicle:vehicle_id (id, title, plate),
-          account:account_category_id (id, name, dre_mapping_key)
+          entity:entities!financial_transactions_entity_id_fkey (id, name),
+          vehicle:vehicles!financial_transactions_vehicle_id_fkey (id, title, plate),
+          account:chart_of_accounts!financial_transactions_account_category_id_fkey (id, name, dre_mapping_key)
         `)
         .eq("user_id", user.id)
         .eq("type", "expense")

@@ -68,8 +68,9 @@ export default function Financeiro() {
       const { data } = await (supabase as any)
         .from("financial_transactions")
         .select(
-          "id, amount, type, status, payment_date, due_date, description, created_at, entity:entity_id(name), account:account_id(name, dre_mapping_key)"
+          "id, amount, type, status, payment_date, due_date, description, created_at, entity:entities!financial_transactions_entity_id_fkey(name), account:chart_of_accounts!financial_transactions_account_category_id_fkey(name, dre_mapping_key)"
         )
+
         .eq("user_id", userId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });

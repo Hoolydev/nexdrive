@@ -43,7 +43,7 @@ type FinancialTransaction = {
 type Product = {
   id: string; title: string | null; price: number | null;
   actual_sale_price: number | null; sale_date: string | null;
-  status: string | null; created_at: string;
+  sold: boolean | null; created_at: string;
   brand: string | null; model: string | null; updated_at: string | null;
 };
 
@@ -104,11 +104,11 @@ export default function Dashboard() {
       const [txRes, prodRes] = await Promise.all([
         (supabase as any)
           .from("financial_transactions")
-          .select("id, amount, type, status, payment_date, due_date, description, created_at, entity:entity_id(name), account:account_id(name, dre_mapping_key)")
+          .select("id, amount, type, status, payment_date, due_date, description, created_at, entity:entities!financial_transactions_entity_id_fkey(name), account:chart_of_accounts!financial_transactions_account_category_id_fkey(name, dre_mapping_key)")
           .eq("user_id", userId).is("deleted_at", null)
           .order("created_at", { ascending: false }),
         supabase.from("products")
-          .select("id, title, price, actual_sale_price, sale_date, status, created_at, brand, model, updated_at")
+          .select("id, title, price, actual_sale_price, sale_date, sold, created_at, brand, model, updated_at")
           .eq("user_id", userId).is("deleted_at", null),
       ]);
       setState({ transactions: txRes.data ?? [], products: prodRes.data ?? [] });
@@ -129,8 +129,8 @@ export default function Dashboard() {
     const receitaMes = transactions.filter(t => t.type === "income" && t.status === "paid" && t.payment_date?.startsWith(monthStr)).reduce((s, t) => s + Number(t.amount), 0);
     const despesasMes = transactions.filter(t => t.type === "expense" && t.status === "paid" && t.payment_date?.startsWith(monthStr)).reduce((s, t) => s + Number(t.amount), 0);
     const resultadoMes = receitaMes - despesasMes;
-    const veiculosEstoque = products.filter(p => p.status === "active").length;
-    const veiculosVendidosMes = products.filter(p => p.status === "sold" && p.updated_at?.startsWith(monthStr)).length;
+    const veiculosEstoque = products.filter(p => p.sold === false).length;
+    const veiculosVendidosMes = products.filter(p => p.sold === true && p.updated_at?.startsWith(monthStr)).length;
     const openIncome = transactions.filter(t => t.type === "income" && ["open", "overdue", "partial"].includes(t.status));
     const aReceber = openIncome.reduce((s, t) => s + Number(t.amount), 0);
     const openExpense = transactions.filter(t => t.type === "expense" && ["open", "overdue", "partial"].includes(t.status));
@@ -141,7 +141,7 @@ export default function Dashboard() {
     const margemBruta = receitaMes > 0 ? ((receitaMes - despesasMes) / receitaMes) * 100 : 0;
     const overdueIncome = transactions.filter(t => t.type === "income" && t.status === "overdue");
     const taxaInadimplencia = aReceber > 0 ? (overdueIncome.reduce((s,t) => s+Number(t.amount),0) / aReceber) * 100 : 0;
-    const soldThisMonth = products.filter(p => p.status === "sold" && p.sale_date?.startsWith(monthStr));
+    const soldThisMonth = products.filter(p => p.sold === true && p.sale_date?.startsWith(monthStr));
     const ticketMedioVenda = soldThisMonth.length > 0 ? soldThisMonth.reduce((s, p) => s + Number(p.actual_sale_price ?? p.price ?? 0), 0) / soldThisMonth.length : 0;
     const upcoming = transactions.filter(t => ["open","overdue","partial"].includes(t.status) && t.due_date && t.due_date >= today && t.due_date <= in7Days).sort((a,b) => (a.due_date??'').localeCompare(b.due_date??'')).slice(0,10);
 
@@ -159,7 +159,7 @@ export default function Dashboard() {
       return { month: monthNames[d.getMonth()], Receita: receita, Despesa: despesa };
     });
     const brandCounts: Record<string, number> = {};
-    products.filter(p => p.status === "active").forEach(p => { const b = p.brand || "Outros"; brandCounts[b] = (brandCounts[b] || 0) + 1; });
+    products.filter(p => p.sold === false).forEach(p => { const b = p.brand || "Outros"; brandCounts[b] = (brandCounts[b] || 0) + 1; });
     const brandDistribution = Object.entries(brandCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value-a.value).slice(0,6);
     return { last6, brandDistribution };
   }, [state]);

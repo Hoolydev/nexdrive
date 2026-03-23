@@ -133,10 +133,10 @@ export default function Comissoes() {
         .from("financial_transactions")
         .select(`
           id, amount, status, due_date, payment_date, description,
-          seller:seller_entity_id (id, name),
-          entity:entity_id (id, name),
-          vehicle:vehicle_id (id, title, plate),
-          account:account_category_id (id, name, dre_mapping_key),
+          seller:entities!financial_transactions_seller_entity_id_fkey (id, name),
+          entity:entities!financial_transactions_entity_id_fkey (id, name),
+          vehicle:vehicles!financial_transactions_vehicle_id_fkey (id, title, plate),
+          account:chart_of_accounts!financial_transactions_account_category_id_fkey (id, name, dre_mapping_key),
           source_transaction:commission_source_transaction_id (id, amount, payment_date)
         `)
         .eq("user_id", userId)
