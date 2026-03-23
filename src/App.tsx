@@ -38,6 +38,8 @@ const StoreLayout = lazy(() => import("./components/loja/StoreLayout"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const Entities = lazy(() => import("./pages/Entities"));
+const EntityForm = lazy(() => import("./pages/EntityForm"));
+const LancamentoForm = lazy(() => import("./pages/financeiro/LancamentoForm"));
 const CrmKanban = lazy(() => import("./pages/CrmKanban"));
 const ContratoTemplates = lazy(() => import("./pages/financeiro/ContratoTemplates"));
 const ClearingHouse = lazy(() => import("./pages/financeiro/ClearingHouse"));
@@ -121,6 +123,8 @@ const App = () => (
                           <Route path="/products" element={<Products />} />
                           <Route path="/customers" element={<Customers />} />
                           <Route path="/entities" element={<Entities />} />
+                          <Route path="/entities/new" element={<EntityForm />} />
+                          <Route path="/entities/:id/edit" element={<EntityForm />} />
                           <Route path="/crm" element={<CrmKanban />} />
                           <Route path="/messages" element={<Messages />} />
                           <Route path="/reports" element={<Reports />} />
@@ -136,6 +140,7 @@ const App = () => (
                             <Route path="fluxo-caixa" element={<FluxoCaixa />} />
                             <Route path="plano-contas" element={<PlanoContas />} />
                             <Route path="lancamentos" element={<Lancamentos />} />
+                            <Route path="lancamentos/new" element={<LancamentoForm />} />
                             <Route path="relatorio-roi" element={<RelatorioROI />} />
                             <Route path="relatorio-estoque" element={<RelatorioEstoque />} />
                             <Route path="relatorio-comissoes" element={<RelatorioComissoes />} />

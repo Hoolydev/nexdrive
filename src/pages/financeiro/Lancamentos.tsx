@@ -1,16 +1,13 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -23,28 +20,13 @@ import {
   Receipt,
   Scale,
 } from "lucide-react";
-import type {
-  FinancialTransaction,
-  ChartOfAccount,
-  Entity,
-} from "@/integrations/supabase/types-prd";
+import type { FinancialTransaction } from "@/integrations/supabase/types-prd";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
 const formatDate = (date: string) =>
   new Date(date + "T00:00:00").toLocaleDateString("pt-BR");
-
-const paymentMethodLabels: Record<string, string> = {
-  cash: "Dinheiro",
-  pix: "PIX",
-  credit_card: "Cartao de Credito",
-  debit_card: "Cartao de Debito",
-  boleto: "Boleto",
-  financing: "Financiamento",
-  transfer: "Transferencia",
-  other: "Outro",
-};
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   open: { label: "Aberto", className: "bg-gray-100 text-gray-700 border-gray-200" },
@@ -61,34 +43,18 @@ interface TransactionRow extends FinancialTransaction {
 }
 
 export default function Lancamentos() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [typeFilter, setTypeFilter] = useState<"all" | "expense" | "income">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [form, setForm] = useState({
-    type: "expense" as "income" | "expense",
-    entity_id: "",
-    account_category_id: "",
-    vehicle_id: "",
-    amount: "",
-    due_date: "",
-    payment_method: "pix",
-    description: "",
-    notes: "",
-    is_refundable: false,
-    refund_target_entity_id: "",
-  });
 
-  // Fetch transactions with joined data
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["financial_transactions"],
     queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
       const { data, error } = await (supabase as any)
@@ -105,109 +71,6 @@ export default function Lancamentos() {
     },
   });
 
-  // Fetch entities for the form select
-  const { data: entities = [] } = useQuery({
-    queryKey: ["entities_select"],
-    queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data } = await (supabase as any)
-        .from("entities")
-        .select("id, name")
-        .eq("user_id", user.id)
-        .is("deleted_at", null)
-        .order("name");
-      return (data || []) as Pick<Entity, "id" | "name">[];
-    },
-  });
-
-  // Fetch chart of accounts level 3 for category select
-  const { data: categories = [] } = useQuery({
-    queryKey: ["chart_of_accounts_l3"],
-    queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data } = await (supabase as any)
-        .from("chart_of_accounts")
-        .select("id, name, code, type")
-        .eq("user_id", user.id)
-        .eq("level", 3)
-        .eq("active", true)
-        .order("code");
-      return (data || []) as Pick<ChartOfAccount, "id" | "name" | "code" | "type">[];
-    },
-  });
-
-  // Fetch vehicles for optional select
-  const { data: vehicles = [] } = useQuery({
-    queryKey: ["vehicles_select"],
-    queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data } = await supabase
-        .from("products")
-        .select("id, brand, model, model_year")
-        .eq("user_id", user.id)
-        .order("brand");
-      return (data || []) as { id: string; brand: string | null; model: string | null; model_year: number | null }[];
-    },
-  });
-
-  // Create transaction mutation
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Nao autenticado");
-
-      const { error } = await (supabase as any).from("financial_transactions").insert({
-        user_id: user.id,
-        type: form.type,
-        entity_id: form.entity_id,
-        account_category_id: form.account_category_id,
-        vehicle_id: form.vehicle_id || null,
-        amount: parseFloat(form.amount),
-        due_date: form.due_date,
-        payment_method: form.payment_method || null,
-        description: form.description.trim() || null,
-        notes: form.notes.trim() || null,
-        status: "open",
-        is_refundable: form.is_refundable,
-        refund_target_entity_id: form.is_refundable && form.refund_target_entity_id ? form.refund_target_entity_id : null,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Lancamento criado com sucesso");
-      queryClient.invalidateQueries({ queryKey: ["financial_transactions"] });
-      setSheetOpen(false);
-      setForm({
-        type: "expense",
-        entity_id: "",
-        account_category_id: "",
-        vehicle_id: "",
-        amount: "",
-        due_date: "",
-        payment_method: "pix",
-        description: "",
-        notes: "",
-        is_refundable: false,
-        refund_target_entity_id: "",
-      });
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Erro ao criar lancamento");
-    },
-  });
-
-  // Pay mutation
   const payMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await (supabase as any)
@@ -220,15 +83,14 @@ export default function Lancamentos() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Lancamento baixado com sucesso");
+      toast.success("Lançamento baixado com sucesso");
       queryClient.invalidateQueries({ queryKey: ["financial_transactions"] });
     },
     onError: () => {
-      toast.error("Erro ao baixar lancamento");
+      toast.error("Erro ao baixar lançamento");
     },
   });
 
-  // Cancel mutation
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await (supabase as any)
@@ -238,15 +100,14 @@ export default function Lancamentos() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Lancamento estornado");
+      toast.success("Lançamento estornado");
       queryClient.invalidateQueries({ queryKey: ["financial_transactions"] });
     },
     onError: () => {
-      toast.error("Erro ao estornar lancamento");
+      toast.error("Erro ao estornar lançamento");
     },
   });
 
-  // Filtering
   const filteredTransactions = useMemo(() => {
     let result = transactions;
 
@@ -277,7 +138,6 @@ export default function Lancamentos() {
     return result;
   }, [transactions, typeFilter, statusFilter, searchTerm, dateFrom, dateTo]);
 
-  // Totals
   const totals = useMemo(() => {
     const active = transactions.filter((t) => t.status !== "cancelled");
     const totalPagar = active.filter((t) => t.type === "expense" && t.status !== "paid").reduce((s, t) => s + Number(t.amount), 0);
@@ -285,22 +145,12 @@ export default function Lancamentos() {
     return { totalPagar, totalReceber, saldo: totalReceber - totalPagar };
   }, [transactions]);
 
-  const filteredCategories = categories.filter((c) => c.type === form.type);
-
-  const handleSave = () => {
-    if (!form.entity_id || !form.account_category_id || !form.amount || !form.due_date) {
-      toast.error("Preencha entidade, categoria, valor e vencimento");
-      return;
-    }
-    createMutation.mutate();
-  };
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Receipt className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">Lancamentos</h1>
+          <h1 className="text-3xl font-bold">Lançamentos</h1>
           <p className="text-muted-foreground">Contas a pagar e receber unificadas</p>
         </div>
       </div>
@@ -352,9 +202,9 @@ export default function Lancamentos() {
             </TabsList>
           </Tabs>
 
-          <Button onClick={() => setSheetOpen(true)}>
+          <Button onClick={() => navigate("/financeiro/lancamentos/new")}>
             <Plus className="h-4 w-4 mr-2" />
-            Novo Lancamento
+            Novo Lançamento
           </Button>
         </div>
 
@@ -386,7 +236,7 @@ export default function Lancamentos() {
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Buscar por entidade ou descricao..."
+              placeholder="Buscar por entidade ou descrição..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -408,7 +258,7 @@ export default function Lancamentos() {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="w-36"
-              placeholder="Ate"
+              placeholder="Até"
             />
           </div>
         </div>
@@ -424,22 +274,22 @@ export default function Lancamentos() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Vencimento</TableHead>
-                  <TableHead>Descricao</TableHead>
+                  <TableHead>Descrição</TableHead>
                   <TableHead>Entidade</TableHead>
-                  <TableHead>Veiculo</TableHead>
+                  <TableHead>Veículo</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Acoes</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTransactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
-                      Nenhum lancamento encontrado
-                    </TableCell>
-                  </TableRow>
+                  <tr>
+                    <td colSpan={8} className="text-center text-muted-foreground py-12">
+                      Nenhum lançamento encontrado
+                    </td>
+                  </tr>
                 ) : (
                   filteredTransactions.map((tx) => {
                     const rowTint =
@@ -515,199 +365,6 @@ export default function Lancamentos() {
           )}
         </CardContent>
       </Card>
-
-      {/* New Transaction Sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Novo Lancamento</SheetTitle>
-            <SheetDescription>Cadastre uma nova conta a pagar ou receber.</SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-5 mt-6">
-            {/* Type Toggle */}
-            <div>
-              <Label className="mb-2 block">Tipo</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={form.type === "expense" ? "default" : "outline"}
-                  className={form.type === "expense" ? "bg-red-600 hover:bg-red-700" : ""}
-                  onClick={() => setForm({ ...form, type: "expense", account_category_id: "" })}
-                >
-                  <ArrowDownCircle className="h-4 w-4 mr-2" />
-                  Despesa
-                </Button>
-                <Button
-                  type="button"
-                  variant={form.type === "income" ? "default" : "outline"}
-                  className={form.type === "income" ? "bg-green-600 hover:bg-green-700" : ""}
-                  onClick={() => setForm({ ...form, type: "income", account_category_id: "" })}
-                >
-                  <ArrowUpCircle className="h-4 w-4 mr-2" />
-                  Receita
-                </Button>
-              </div>
-            </div>
-
-            {/* Entity */}
-            <div>
-              <Label>Entidade *</Label>
-              <Select value={form.entity_id} onValueChange={(v) => setForm({ ...form, entity_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a entidade..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {entities.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Category */}
-            <div>
-              <Label>Categoria (Plano de Contas) *</Label>
-              <Select
-                value={form.account_category_id}
-                onValueChange={(v) => setForm({ ...form, account_category_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a categoria..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredCategories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.code} - {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Vehicle (optional) */}
-            <div>
-              <Label>Veiculo (opcional)</Label>
-              <Select
-                value={form.vehicle_id || "none"}
-                onValueChange={(v) => setForm({ ...form, vehicle_id: v === "none" ? "" : v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Nenhum" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {vehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.brand} {v.model} {(v as any).model_year || ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Valor (R$) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Vencimento *</Label>
-                <Input
-                  type="date"
-                  value={form.due_date}
-                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Forma de Pagamento</Label>
-              <Select
-                value={form.payment_method}
-                onValueChange={(v) => setForm({ ...form, payment_method: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(paymentMethodLabels).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Descricao</Label>
-              <Input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Breve descricao do lancamento..."
-              />
-            </div>
-
-            <div>
-              <Label>Observacoes</Label>
-              <Input
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Notas adicionais..."
-              />
-            </div>
-
-            <Separator />
-
-            {/* Refundable */}
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={form.is_refundable}
-                onCheckedChange={(v) => setForm({ ...form, is_refundable: v })}
-              />
-              <Label>Reembolsavel</Label>
-            </div>
-
-            {form.is_refundable && (
-              <div>
-                <Label>Entidade para Reembolso</Label>
-                <Select
-                  value={form.refund_target_entity_id}
-                  onValueChange={(v) => setForm({ ...form, refund_target_entity_id: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entities.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <Button
-              className="w-full"
-              onClick={handleSave}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? "Salvando..." : "Criar Lancamento"}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
