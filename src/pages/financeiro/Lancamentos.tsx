@@ -152,10 +152,10 @@ export default function Lancamentos() {
       if (!user) return [];
       const { data } = await supabase
         .from("products")
-        .select("id, brand, model, year")
+        .select("id, brand, model, model_year")
         .eq("user_id", user.id)
         .order("brand");
-      return (data || []) as { id: string; brand: string | null; model: string | null; year: number | null }[];
+      return (data || []) as { id: string; brand: string | null; model: string | null; model_year: number | null }[];
     },
   });
 
@@ -591,17 +591,17 @@ export default function Lancamentos() {
             <div>
               <Label>Veiculo (opcional)</Label>
               <Select
-                value={form.vehicle_id}
-                onValueChange={(v) => setForm({ ...form, vehicle_id: v })}
+                value={form.vehicle_id || "none"}
+                onValueChange={(v) => setForm({ ...form, vehicle_id: v === "none" ? "" : v })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Nenhum" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {vehicles.map((v) => (
                     <SelectItem key={v.id} value={v.id}>
-                      {v.brand} {v.model} {v.year || ""}
+                      {v.brand} {v.model} {(v as any).model_year || ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
