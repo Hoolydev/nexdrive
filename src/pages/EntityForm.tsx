@@ -456,6 +456,40 @@ export default function EntityForm() {
 
               {/* ----- Tab: Dados Básicos ---------------------------------- */}
               <TabsContent value="basics" className="space-y-4 mt-4">
+                {/* Tipo de Entidade */}
+                <div className="space-y-2">
+                  <Label>Tipo de Entidade *</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: "is_client" as const, label: "Cliente", color: "blue" },
+                      { key: "is_supplier" as const, label: "Fornecedor", color: "orange" },
+                      { key: "is_seller" as const, label: "Vendedor", color: "green" },
+                      { key: "is_investor" as const, label: "Investidor", color: "purple" },
+                    ].map(({ key, label, color }) => {
+                      const active = formData[key];
+                      const styles: Record<string, string> = {
+                        blue: active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-blue-600 border-blue-300 hover:bg-blue-50",
+                        orange: active ? "bg-orange-500 text-white border-orange-500" : "bg-white text-orange-600 border-orange-300 hover:bg-orange-50",
+                        green: active ? "bg-green-600 text-white border-green-600" : "bg-white text-green-600 border-green-300 hover:bg-green-50",
+                        purple: active ? "bg-purple-600 text-white border-purple-600" : "bg-white text-purple-600 border-purple-300 hover:bg-purple-50",
+                      };
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => updateField(key, !formData[key])}
+                          className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${styles[color]}`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {!formData.is_client && !formData.is_supplier && !formData.is_seller && !formData.is_investor && (
+                    <p className="text-xs text-muted-foreground">Selecione pelo menos um tipo</p>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome Completo *</Label>
                   <Input
