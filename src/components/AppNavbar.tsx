@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole, UserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -19,6 +20,7 @@ import {
   Bell,
   FileText,
   Search,
+  Settings,
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────────────────────────
@@ -29,12 +31,14 @@ interface NavItem {
   title: string;
   url: string;
   icon: React.ElementType;
+  roles?: UserRole[];
 }
 
 interface DropdownGroup {
   title: string;
   icon: React.ElementType;
   items: NavItem[];
+  roles?: UserRole[];
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -53,6 +57,7 @@ const DROPDOWN_GROUPS: DropdownGroup[] = [
     title: "Financeiro",
     icon: Wallet,
     items: [{ title: "Painel Financeiro", url: "/financeiro", icon: Wallet }],
+    roles: ["owner"],
   },
   {
     title: "Contratos",
@@ -61,11 +66,7 @@ const DROPDOWN_GROUPS: DropdownGroup[] = [
       { title: "Contratos",   url: "/contract",                    icon: FileSignature },
       { title: "Templates",   url: "/financeiro/contrato-templates", icon: FileText    },
     ],
-  },
-  {
-    title: "Minha Loja",
-    icon: Store,
-    items: [{ title: "Configurações da Loja", url: "/minha-loja", icon: Store }],
+    roles: ["owner", "manager"],
   },
   {
     title: "IA",
@@ -74,8 +75,19 @@ const DROPDOWN_GROUPS: DropdownGroup[] = [
       { title: "Assistente IA", url: "/ai-store",  icon: Bot         },
       { title: "Agentes IA",    url: "/ai-agents", icon: BrainCircuit },
     ],
+    roles: ["owner"],
   },
 ];
+
+const SETTINGS_GROUP: DropdownGroup = {
+  title: "Configurações",
+  icon: Settings,
+  items: [
+    { title: "Gestão de Equipe",       url: "/settings/team", icon: Users    },
+    { title: "Configurações da Loja",  url: "/minha-loja",    icon: Store    },
+  ],
+  roles: ["owner"],
+};
 
 /* ─────────────────────────────────────────────────────────────────
    NavLink item — AUTOFLOW horizontal nav style
@@ -195,14 +207,22 @@ function MobileDrawer({
   open,
   onClose,
   onLogout,
+  userRole,
 }: {
   open: boolean;
   onClose: () => void;
   onLogout: () => void;
+  userRole: UserRole;
 }) {
+  const filteredDropdowns = DROPDOWN_GROUPS.filter(
+    (g) => !g.roles || g.roles.includes(userRole)
+  );
+  const settingsItems = (!SETTINGS_GROUP.roles || SETTINGS_GROUP.roles.includes(userRole))
+    ? SETTINGS_GROUP.items : [];
   const allLinks: NavItem[] = [
     ...NAV_ITEMS,
-    ...DROPDOWN_GROUPS.flatMap((g) => g.items),
+    ...filteredDropdowns.flatMap((g) => g.items),
+    ...settingsItems,
   ];
 
   if (!open) return null;
@@ -222,9 +242,11 @@ function MobileDrawer({
       >
         <div className="flex items-center justify-between px-5 h-16 border-b border-[#E8E8F0]">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-[10px] bg-brand-gradient flex items-center justify-center shadow-brand">
-              <span className="text-white font-bold text-sm" style={{ fontFamily: "var(--font-display)" }}>N</span>
-            </div>
+            <img 
+              src="/nexdrive-logo.png" 
+              alt="NexDrive Logo" 
+              className="h-8 w-auto object-contain"
+            />
             <span className="font-semibold text-base text-[#1A1A2E]" style={{ fontFamily: "var(--font-display)" }}>
               NexDrive
             </span>
@@ -279,6 +301,12 @@ function MobileDrawer({
 export function AppNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+  const { role } = useUserRole();
+
+  const filteredDropdowns = DROPDOWN_GROUPS.filter(
+    (g) => !g.roles || g.roles.includes(role)
+  );
+  const showSettings = !SETTINGS_GROUP.roles || SETTINGS_GROUP.roles.includes(role);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -302,17 +330,11 @@ export function AppNavbar() {
         >
           {/* Logo */}
           <NavLink to="/dashboard" className="flex items-center gap-2.5 shrink-0">
-            <div
-              className="h-9 w-9 rounded-[10px] bg-brand-gradient flex items-center justify-center"
-              style={{ boxShadow: "var(--shadow-brand)" }}
-            >
-              <span
-                className="text-white font-bold text-base"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                N
-              </span>
-            </div>
+            <img 
+              src="/nexdrive-logo.png" 
+              alt="NexDrive Logo" 
+              className="h-9 w-auto object-contain"
+            />
             <span
               className="font-semibold text-lg text-brand-gradient hidden sm:block"
               style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
@@ -329,7 +351,7 @@ export function AppNavbar() {
             {NAV_ITEMS.map((item) => (
               <TopNavLink key={item.url} item={item} />
             ))}
-            {DROPDOWN_GROUPS.map((group) => (
+            {filteredDropdowns.map((group) => (
               <TopNavDropdown key={group.title} group={group} />
             ))}
           </nav>
@@ -346,6 +368,11 @@ export function AppNavbar() {
                 style={{ fontFamily: "var(--font-body)" }}
               />
             </div>
+
+            {/* Settings dropdown (owner only) */}
+            {showSettings && (
+              <TopNavDropdown group={SETTINGS_GROUP} />
+            )}
 
             {/* Notification bell */}
             <button className="h-9 w-9 flex items-center justify-center rounded-[10px] bg-[#F8FAFC] text-[#6B6B8A] hover:text-[#2563EB] hover:bg-[rgba(105,80,240,0.08)] transition-colors">
@@ -373,7 +400,7 @@ export function AppNavbar() {
         </div>
       </header>
 
-      <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} onLogout={handleLogout} />
+      <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} onLogout={handleLogout} userRole={role} />
     </>
   );
 }

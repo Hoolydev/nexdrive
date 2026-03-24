@@ -35,9 +35,11 @@ export default function Auth() {
         
         <div className="relative z-10">
           <Link to="/" className="flex items-center gap-3 w-fit hover:opacity-80 transition-opacity mb-16">
-            <div className="w-10 h-10 bg-white rounded-[10px] flex items-center justify-center shadow-md">
-              <span className="text-[#2563EB] text-lg font-black tracking-tighter" style={{ fontFamily: "var(--font-display)" }}>N</span>
-            </div>
+            <img 
+              src="/nexdrive-logo.png" 
+              alt="NexDrive Logo" 
+              className="h-10 w-auto object-contain"
+            />
             <span className="text-2xl font-bold tracking-tight text-white" style={{ fontFamily: "var(--font-display)" }}>NexDrive</span>
           </Link>
 
@@ -76,9 +78,11 @@ export default function Auth() {
         {/* Mobile Logo Top */}
         <div className="absolute top-8 left-8 lg:hidden">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-brand-gradient rounded-[8px] flex items-center justify-center shadow-md">
-              <span className="text-white text-base font-black tracking-tighter" style={{ fontFamily: "var(--font-display)" }}>N</span>
-            </div>
+            <img 
+              src="/nexdrive-logo.png" 
+              alt="NexDrive Logo" 
+              className="h-8 w-auto object-contain"
+            />
             <span className="text-xl font-bold tracking-tight text-[#1A1A2E]" style={{ fontFamily: "var(--font-display)" }}>NexDrive</span>
           </Link>
         </div>

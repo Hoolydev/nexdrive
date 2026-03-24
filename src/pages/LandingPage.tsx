@@ -194,9 +194,11 @@ export default function LandingPage() {
         <div className="max-w-[1440px] mx-auto px-6 h-[72px] flex items-center justify-between">
           {/* Logo with AUTOFLOW font block */}
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-brand-gradient rounded-[10px] flex items-center justify-center shadow-brand shrink-0">
-              <span className="text-white text-lg font-black tracking-tighter" style={{ fontFamily: "var(--font-display)" }}>N</span>
-            </div>
+            <img 
+              src="/nexdrive-logo.png" 
+              alt="NexDrive Logo" 
+              className="w-9 h-auto object-contain shrink-0"
+            />
             <span className="text-xl font-bold tracking-tight text-[#1A1A2E] hidden sm:block" style={{ fontFamily: "var(--font-display)" }}>
               Nex<span className="text-brand-gradient">Drive</span>
             </span>
@@ -215,9 +217,9 @@ export default function LandingPage() {
             <button onClick={() => navigate("/auth")} className="flex items-center gap-2 text-[#1A1A2E] text-[14px] font-bold hover:text-[#2563EB] transition-colors hidden sm:flex">
               Fazer Login
             </button>
-            <button onClick={() => navigate("/auth")} className="bg-brand-gradient text-white text-[14px] font-bold px-6 py-2.5 rounded-[12px] shadow-brand btn-press flex items-center gap-1.5">
-              Começar Agora <ChevronRight className="w-4 h-4" />
-            </button>
+            <a href="#contato" className="bg-brand-gradient text-white text-[14px] font-bold px-6 py-2.5 rounded-[12px] shadow-brand btn-press flex items-center gap-1.5">
+              Agendar Demonstração <ChevronRight className="w-4 h-4" />
+            </a>
             <button className="md:hidden p-2 text-[#1A1A2E]" onClick={() => setMobileMenu(!mobileMenu)}>
               {mobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -255,17 +257,17 @@ export default function LandingPage() {
                 A única plataforma focada no lucro real do lojista: controle seu estoque em tempo real, capture leads no WhatsApp 24h por dia e automatize contratos com apenas 1 clique.
               </p>
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
-                <button onClick={() => navigate("/auth")} className="w-full sm:w-auto bg-brand-gradient hover:opacity-90 text-white font-bold text-base px-8 py-4 rounded-[14px] shadow-brand btn-press flex items-center justify-center gap-2 transition-all">
-                  Criar minha conta gratuita <ArrowRight className="w-5 h-5" />
-                </button>
+                <a href="#contato" className="w-full sm:w-auto bg-brand-gradient hover:opacity-90 text-white font-bold text-base px-8 py-4 rounded-[14px] shadow-brand btn-press flex items-center justify-center gap-2 transition-all">
+                  Fale com um Especialista <ArrowRight className="w-5 h-5" />
+                </a>
                 <button onClick={() => document.getElementById("plataforma")?.scrollIntoView({ behavior: "smooth" })} className="w-full sm:w-auto bg-white hover:bg-gray-50 text-[#1A1A2E] font-bold text-base px-8 py-4 rounded-[14px] border border-[#E8E8F0] shadow-sm btn-press transition-all flex items-center justify-center gap-2">
                   Ver como funciona por dentro
                 </button>
               </div>
               
               <div className="mt-10 flex items-center justify-center lg:justify-start gap-6 text-[13px] font-medium text-[#94A3B8]" style={{ fontFamily: "var(--font-ui)" }}>
-                <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-[#22C55E]" /> Sem cartão de crédito</div>
-                <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-[#22C55E]" /> Cancela a qualquer momento</div>
+                <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-[#22C55E]" /> Implantação guiada</div>
+                <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 text-[#22C55E]" /> Treinamento da equipe</div>
               </div>
             </div>
 
@@ -381,9 +383,9 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 
-                <button onClick={() => navigate("/auth")} className="bg-brand-gradient hover:shadow-brand text-white font-bold text-base px-8 py-4 rounded-[14px] transition-all flex items-center gap-2">
-                  Acessar Painel Financeiro <ChevronRight className="w-5 h-5" />
-                </button>
+                <a href="#contato" className="inline-flex bg-brand-gradient hover:shadow-brand text-white font-bold text-base px-8 py-4 rounded-[14px] transition-all items-center gap-2">
+                  Solicitar Acesso <ChevronRight className="w-5 h-5" />
+                </a>
               </div>
               
               <div className="relative">
@@ -455,9 +457,11 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
             <div className="col-span-1 md:col-span-2 lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-brand-gradient rounded-[8px] flex items-center justify-center">
-                  <span className="text-white text-base font-black tracking-tighter" style={{ fontFamily: "var(--font-display)" }}>N</span>
-                </div>
+                <img 
+                  src="/nexdrive-logo.png" 
+                  alt="NexDrive Logo" 
+                  className="w-8 h-auto object-contain"
+                />
                 <span className="text-xl font-bold tracking-tight text-white" style={{ fontFamily: "var(--font-display)" }}>NexDrive</span>
               </div>
               <p className="text-[#94A3B8] text-[14px] leading-relaxed mb-6">

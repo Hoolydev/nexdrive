@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { hapticFeedback } from "@/utils/haptic";
+import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,7 @@ type Product = {
 };
 
 export default function Products() {
+  const { isSeller } = useUserRole();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -1539,13 +1541,15 @@ export default function Products() {
                   </CardTitle>
                   {getStatusBadge(product.status)}
                 </div>
-                <div className="flex items-center space-x-2 bg-slate-50 border border-slate-100 p-2 rounded-md">
-                  <Switch
-                    checked={product.show_in_store}
-                    onCheckedChange={(checked) => handleToggleStoreVisibility(product.id, checked)}
-                  />
-                  <Label className="text-xs text-muted-foreground mr-1">Visível na Loja</Label>
-                </div>
+                {!isSeller && (
+                  <div className="flex items-center space-x-2 bg-slate-50 border border-slate-100 p-2 rounded-md">
+                    <Switch
+                      checked={product.show_in_store}
+                      onCheckedChange={(checked) => handleToggleStoreVisibility(product.id, checked)}
+                    />
+                    <Label className="text-xs text-muted-foreground mr-1">Visível na Loja</Label>
+                  </div>
+                )}
               </div>
               {product.fiscal_grace_until && new Date(product.fiscal_grace_until) > new Date() && (() => {
                 const graceDays = Math.ceil((new Date(product.fiscal_grace_until).getTime() - Date.now()) / 86400000);
@@ -1620,12 +1624,16 @@ export default function Products() {
                 <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
               )}
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" size="sm" onClick={() => handleEdit(product)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!isSeller && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(product)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
               {/* Status Transition Buttons */}
               {(() => {

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppNavbar } from "@/components/AppNavbar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RoleGuard } from "@/components/RoleGuard";
 import { FinanceiroLayout } from "@/components/financeiro/FinanceiroLayout";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -47,6 +48,9 @@ const VehicleOwners = lazy(() => import("./pages/financeiro/VehicleOwners"));
 const VitrinePage = lazy(() => import("./pages/loja/VitrinePage"));
 const MarketplacePage = lazy(() => import("./pages/loja/MarketplacePage"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const TeamManagement = lazy(() => import("./pages/settings/TeamManagement"));
+const SellerDashboard = lazy(() => import("./pages/SellerDashboard"));
+const DashboardRouter = lazy(() => import("./components/DashboardRouter"));
 
 const queryClient = new QueryClient();
 
@@ -119,19 +123,19 @@ const App = () => (
                     <main className="flex-1">
                       <Suspense fallback={<Loading />}>
                         <Routes>
-                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/dashboard" element={<DashboardRouter />} />
                           <Route path="/products" element={<Products />} />
                           <Route path="/customers" element={<Customers />} />
                           <Route path="/entities" element={<Entities />} />
                           <Route path="/entities/new" element={<EntityForm />} />
                           <Route path="/entities/:id/edit" element={<EntityForm />} />
                           <Route path="/crm" element={<CrmKanban />} />
-                          <Route path="/messages" element={<Messages />} />
-                          <Route path="/reports" element={<Reports />} />
-                          <Route path="/contract" element={<Contract />} />
-                          <Route path="/ai-store" element={<AIStore />} />
-                          <Route path="/ai-agents" element={<AIAgents />} />
-                          <Route path="/financeiro" element={<FinanceiroLayout />}>
+                          <Route path="/messages" element={<RoleGuard allowedRoles={["owner"]}><Messages /></RoleGuard>} />
+                          <Route path="/reports" element={<RoleGuard allowedRoles={["owner"]}><Reports /></RoleGuard>} />
+                          <Route path="/contract" element={<RoleGuard allowedRoles={["owner", "manager"]}><Contract /></RoleGuard>} />
+                          <Route path="/ai-store" element={<RoleGuard allowedRoles={["owner"]}><AIStore /></RoleGuard>} />
+                          <Route path="/ai-agents" element={<RoleGuard allowedRoles={["owner"]}><AIAgents /></RoleGuard>} />
+                          <Route path="/financeiro" element={<RoleGuard allowedRoles={["owner"]}><FinanceiroLayout /></RoleGuard>}>
                             <Route index element={<Financeiro />} />
                             <Route path="vendedores" element={<Vendedores />} />
                             <Route path="comissoes" element={<Comissoes />} />
@@ -151,7 +155,8 @@ const App = () => (
                             <Route path="vehicle-owners" element={<VehicleOwners />} />
                             <Route path="relatorio-despesas" element={<RelatorioDespesas />} />
                           </Route>
-                          <Route path="/minha-loja" element={<StoreSettingsPage />} />
+                          <Route path="/minha-loja" element={<RoleGuard allowedRoles={["owner"]}><StoreSettingsPage /></RoleGuard>} />
+                          <Route path="/settings/team" element={<RoleGuard allowedRoles={["owner"]}><TeamManagement /></RoleGuard>} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>

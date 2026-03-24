@@ -237,7 +237,7 @@ export function AppSidebar() {
       {/* Logo area */}
       <div className="flex items-center px-4 py-3 border-b border-sidebar-border">
         <img
-          src="/logo.png"
+          src="/nexdrive-logo.png"
           alt="NexDrive"
           className="h-10 w-auto object-contain"
           onError={(e) => {

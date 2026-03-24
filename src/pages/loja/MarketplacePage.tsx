@@ -50,7 +50,7 @@ export default function MarketplacePage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("products")
         .select(
           "id, brand, model, title, price, fipe_price, current_km, manufacturing_year, model_year, image_url, vehicle_images, fuel, color"
@@ -132,7 +132,7 @@ export default function MarketplacePage() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src="https://i.postimg.cc/8cznx498/Nex-Drive-Logo.png"
+              src="/nexdrive-logo.png"
               alt="NexDrive"
               className="h-9 w-auto"
             />
