@@ -16,7 +16,7 @@ export const uazapiClient = {
   },
 
   async sendMessage(instanceUrl: string, token: string, phone: string, message: string) {
-    const response = await fetch(`${instanceUrl}/message/text`, {
+    const response = await fetch(`${instanceUrl}/send/text`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -29,26 +29,27 @@ export const uazapiClient = {
   },
 
   async sendImage(instanceUrl: string, token: string, phone: string, imageUrl: string, caption: string) {
-    const response = await fetch(`${instanceUrl}/message/image`, {
+    const response = await fetch(`${instanceUrl}/send/media`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ phone, image: imageUrl, caption }),
+      body: JSON.stringify({ phone, image: imageUrl, caption, mimeType: 'image/jpeg' }),
     });
     if (!response.ok) throw new Error('Falha ao enviar imagem');
     return response.json();
   },
 
-  async sendAudio(instanceUrl: string, token: string, phone: string, audioUrl: string) {
-    const response = await fetch(`${instanceUrl}/message/audio`, {
+  /** Accepts base64 data URI (data:audio/mpeg;base64,...) or public URL. */
+  async sendAudio(instanceUrl: string, token: string, phone: string, audio: string) {
+    const response = await fetch(`${instanceUrl}/send/media`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ phone, audio: audioUrl }),
+      body: JSON.stringify({ phone, audio, mimeType: 'audio/mpeg' }),
     });
     if (!response.ok) throw new Error('Falha ao enviar áudio');
     return response.json();

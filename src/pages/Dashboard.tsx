@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getEffectiveUserId } from "@/lib/getEffectiveUserId";
 import { Badge } from "@/components/ui/badge";
 import {
   DollarSign, TrendingUp, Car, AlertTriangle,
@@ -97,19 +98,18 @@ export default function Dashboard() {
 
   const loadDashboard = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-      if (!userId) return;
+      const effectiveId = await getEffectiveUserId();
+      if (!effectiveId) return;
 
       const [txRes, prodRes] = await Promise.all([
         (supabase as any)
           .from("financial_transactions")
           .select("id, amount, type, status, payment_date, due_date, description, created_at, entity:entities!financial_transactions_entity_id_fkey(name), account:chart_of_accounts!financial_transactions_account_category_id_fkey(name, dre_mapping_key)")
-          .eq("user_id", userId).is("deleted_at", null)
+          .eq("user_id", effectiveId).is("deleted_at", null)
           .order("created_at", { ascending: false }),
         supabase.from("products")
           .select("id, title, price, actual_sale_price, sale_date, sold, created_at, brand, model, updated_at")
-          .eq("user_id", userId).is("deleted_at", null),
+          .eq("user_id", effectiveId).is("deleted_at", null),
       ]);
       setState({ transactions: txRes.data ?? [], products: prodRes.data ?? [] });
     } catch (err) {

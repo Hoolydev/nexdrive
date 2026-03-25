@@ -321,7 +321,7 @@ export function AppNavbar() {
   return (
     <>
       <header
-        className="sticky top-0 z-40 w-full bg-white border-b border-[#E8E8F0]"
+        className="sticky top-0 z-40 w-full bg-white border-b border-[#E8E8F0] relative"
         style={{ height: "var(--navbar-height)", boxShadow: "var(--shadow-xs)" }}
       >
         <div
@@ -347,14 +347,27 @@ export function AppNavbar() {
           <div className="hidden lg:block w-px h-6 bg-[#E8E8F0] shrink-0" />
 
           {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-5 flex-1 border-b-0 relative">
-            {NAV_ITEMS.map((item) => (
-              <TopNavLink key={item.url} item={item} />
-            ))}
-            {filteredDropdowns.map((group) => (
-              <TopNavDropdown key={group.title} group={group} />
-            ))}
-          </nav>
+          {(role === "seller" || role === "manager") ? (
+            <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2">
+              <nav className="flex items-center gap-5 relative">
+                {NAV_ITEMS.map((item) => (
+                  <TopNavLink key={item.url} item={item} />
+                ))}
+                {filteredDropdowns.map((group) => (
+                  <TopNavDropdown key={group.title} group={group} />
+                ))}
+              </nav>
+            </div>
+          ) : (
+            <nav className="hidden lg:flex items-center gap-5 flex-1 relative">
+              {NAV_ITEMS.map((item) => (
+                <TopNavLink key={item.url} item={item} />
+              ))}
+              {filteredDropdowns.map((group) => (
+                <TopNavDropdown key={group.title} group={group} />
+              ))}
+            </nav>
+          )}
 
           {/* Right actions */}
           <div className="flex items-center gap-2 ml-auto">

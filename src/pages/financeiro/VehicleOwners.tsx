@@ -68,9 +68,12 @@ export default function VehicleOwners() {
   // Load vehicles
   useEffect(() => {
     const loadVehicles = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
       const { data, error } = await (supabase as any)
         .from("products")
         .select("id, brand, model, plate")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) {
         toast.error("Erro ao carregar veículos: " + error.message);
@@ -124,9 +127,12 @@ export default function VehicleOwners() {
     if (q.length < 2) { setEntityResults([]); return; }
     setEntitySearchLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
       const { data } = await (supabase as any)
         .from("entities")
         .select("id, name, cpf_cnpj")
+        .eq("user_id", user.id)
         .or(`name.ilike.%${q}%,cpf_cnpj.ilike.%${q}%`)
         .limit(10);
       setEntityResults(data || []);

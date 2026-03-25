@@ -13,12 +13,27 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        const { data } = await (supabase as any)
-          .from("store_settings")
-          .select("id")
-          .eq("user_id", session.user.id)
+        // Check user role — team members (manager/seller) skip onboarding
+        const { data: profile } = await (supabase as any)
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
           .maybeSingle();
-        setHasStoreSettings(!!data);
+
+        const isTeamMember = profile?.role === "manager" || profile?.role === "seller";
+
+        if (isTeamMember) {
+          // Team members never need onboarding — they use their owner's store
+          setHasStoreSettings(true);
+        } else {
+          // Owner: check if onboarding is complete
+          const { data } = await (supabase as any)
+            .from("store_settings")
+            .select("id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+          setHasStoreSettings(!!data);
+        }
       } else {
         setHasStoreSettings(null);
       }
@@ -46,7 +61,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Redirect to onboarding if no store_settings, unless already going there
+  // Redirect to onboarding if owner hasn't completed setup
   if (hasStoreSettings === false && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
   }

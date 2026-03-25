@@ -131,7 +131,7 @@ export default function ContasReceber() {
         .select(`
           id, amount, due_date, payment_date, status, description, type, seller_entity_id,
           entity:entities!financial_transactions_entity_id_fkey (id, name),
-          vehicle:vehicles!financial_transactions_vehicle_id_fkey (id, title, plate),
+          vehicle:products!financial_transactions_vehicle_id_fkey (id, title, plate),
           seller:entities!financial_transactions_seller_entity_id_fkey (id, name),
           account:chart_of_accounts!financial_transactions_account_category_id_fkey (id, name, dre_mapping_key)
         `)

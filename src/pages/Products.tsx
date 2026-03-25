@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { hapticFeedback } from "@/utils/haptic";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
+import { getEffectiveUserId } from "@/lib/getEffectiveUserId";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -210,17 +211,21 @@ export default function Products() {
   };
 
   useEffect(() => {
-    loadProducts();
-    loadCustomers();
-    loadBrands();
-    loadAllVehicleCosts();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
         const role = user.app_metadata?.role as string | undefined;
         setIsSuperAdmin(role === 'Super_Admin' || role === 'super_admin');
       }
-    });
+      const effectiveId = await getEffectiveUserId();
+      if (effectiveId) {
+        loadProducts(effectiveId);
+        loadCustomers(effectiveId);
+      }
+    })();
+    loadBrands();
+    loadAllVehicleCosts();
   }, []);
 
   const handleBrandChange = async (brandId: string) => {
@@ -297,11 +302,14 @@ export default function Products() {
     }
   };
 
-  const loadProducts = async () => {
+  const loadProducts = async (userId?: string) => {
     try {
+      const uid = userId || currentUserId || (await supabase.auth.getUser()).data.user?.id;
+      if (!uid) return;
       const { data, error } = await supabase
         .from("products")
         .select("*")
+        .eq("user_id", uid)
         .order("created_at", { ascending: false });
       if (error) throw error;
       const formattedData = (data || []).map(product => ({
@@ -317,11 +325,14 @@ export default function Products() {
     }
   };
 
-  const loadCustomers = async () => {
+  const loadCustomers = async (userId?: string) => {
     try {
+      const uid = userId || currentUserId;
+      if (!uid) return;
       const { data, error } = await supabase
         .from("customers")
         .select("id,name,email,phone")
+        .eq("user_id", uid)
         .order("name", { ascending: true });
       if (error) throw error;
       setCustomers((data || []) as any);

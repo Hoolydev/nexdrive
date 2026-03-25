@@ -90,37 +90,17 @@ export default function TeamManagement() {
     setSubmitting(true);
 
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) throw new Error("Não autenticado");
-
-      // Create user via Supabase Auth (admin API via edge function or direct)
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newEmail,
-        password: newPassword,
-        options: {
-          data: {
-            display_name: newName,
-            role: newRole,
-            owner_id: currentUser.id,
-          },
-        },
+      const { data, error } = await (supabase as any).rpc("create_team_member", {
+        p_email: newEmail,
+        p_password: newPassword,
+        p_display_name: newName,
+        p_role: newRole,
       });
 
-      if (authError) throw authError;
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
 
-      if (authData.user) {
-        // Update the profile with role and owner_id
-        await (supabase as any)
-          .from("profiles")
-          .update({
-            role: newRole,
-            owner_id: currentUser.id,
-            display_name: newName,
-          })
-          .eq("id", authData.user.id);
-      }
-
-      toast.success(`${newName} adicionado(a) como ${ROLE_LABELS[newRole]?.label}!`);
+      toast.success(`${newName} adicionado(a) como ${ROLE_LABELS[newRole]?.label}! Pode fazer login imediatamente.`);
       setDialogOpen(false);
       setNewEmail("");
       setNewName("");

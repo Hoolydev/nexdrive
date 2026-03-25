@@ -82,8 +82,8 @@ export default function StorePage() {
     <div className="space-y-6 md:space-y-10">
       {/* Dynamic Hero Section */}
       {settings.hero_template === "classic" && (
-        <div className="bg-white rounded-2xl shadow-sm border p-8 md:p-12 mb-8 flex flex-col md:flex-row items-center gap-8">
-          <div className="flex-1 space-y-4">
+        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden mb-8 flex flex-col md:flex-row items-center">
+          <div className="flex-1 p-8 md:p-12 space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800 leading-tight">
               Encontre o veículo dos seus sonhos
             </h2>
@@ -91,25 +91,56 @@ export default function StorePage() {
               Oferecemos uma seleção premium com procedência garantida e as melhores condições de financiamento.
             </p>
           </div>
-          <div className="flex-1 flex justify-center w-full">
-            <Car className="h-48 w-48 text-gray-100" />
+          <div className="flex-1 flex justify-center w-full h-56 md:h-auto overflow-hidden">
+            {(settings as any).banner_url ? (
+              <img
+                src={(settings as any).banner_url}
+                alt={settings.store_name}
+                className="w-full h-56 md:h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-56 flex items-center justify-center bg-gray-50">
+                <Car className="h-48 w-48 text-gray-100" />
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {settings.hero_template === "minimal" && (
         <div className="text-left mb-8 md:mt-6 border-b pb-8">
+          {(settings as any).banner_url && (
+            <div className="w-full h-40 rounded-xl overflow-hidden mb-5">
+              <img src={(settings as any).banner_url} alt={settings.store_name} className="w-full h-full object-cover" />
+            </div>
+          )}
           <h2 className="text-4xl font-light text-gray-800 mb-3 tracking-tight">Estoque Selecionado</h2>
           <p className="text-gray-500 uppercase tracking-widest text-sm font-semibold">{vehicles.length} Veículos Constam Disponíveis</p>
         </div>
       )}
 
       {(!settings.hero_template || settings.hero_template === "modern") && (
-        <div className="text-center mb-8 py-10 bg-gradient-to-b from-transparent to-gray-50 rounded-2xl">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-800 mb-4 tracking-tight">Nossos Veículos</h2>
-          <p className="text-gray-500 text-lg bg-white inline-block px-4 py-1.5 rounded-full shadow-sm border">
-            {vehicles.length} veículos disponíveis em nosso estoque
-          </p>
+        <div className="relative text-center mb-8 py-10 rounded-2xl overflow-hidden">
+          {(settings as any).banner_url ? (
+            <>
+              <img
+                src={(settings as any).banner_url}
+                alt={settings.store_name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/40" />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50" />
+          )}
+          <div className="relative z-10">
+            <h2 className={`text-3xl md:text-4xl font-extrabold mb-4 tracking-tight ${(settings as any).banner_url ? "text-white" : "text-gray-800"}`}>
+              Nossos Veículos
+            </h2>
+            <p className="text-lg bg-white text-gray-500 inline-block px-4 py-1.5 rounded-full shadow-sm border">
+              {vehicles.length} veículos disponíveis em nosso estoque
+            </p>
+          </div>
         </div>
       )}
 

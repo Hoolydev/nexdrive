@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { hapticFeedback } from "@/utils/haptic";
 import { supabase } from "@/integrations/supabase/client";
+import { getEffectiveUserId } from "@/lib/getEffectiveUserId";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -153,13 +154,13 @@ export default function CrmKanban() {
   // ---------------------------------------------------------------------------
   const loadConfiguration = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const effectiveId = await getEffectiveUserId();
+      if (!effectiveId) return;
 
       const { data: userFunnels, error: funnelsError } = await (supabase as any)
         .from("crm_funnels")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveId)
         .order("created_at", { ascending: true });
 
       if (funnelsError) {
@@ -194,13 +195,13 @@ export default function CrmKanban() {
   const loadLeads = useCallback(async () => {
     if (!activeFunnelId) return;
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const effectiveId = await getEffectiveUserId();
+      if (!effectiveId) return;
 
       const { data, error } = await (supabase as any)
         .from("crm_leads")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveId)
         .eq("funnel_id", activeFunnelId)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });

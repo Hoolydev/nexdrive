@@ -102,7 +102,7 @@ export default function ContasPagar() {
         .select(`
           id, amount, due_date, payment_date, status, description, type,
           entity:entities!financial_transactions_entity_id_fkey (id, name),
-          vehicle:vehicles!financial_transactions_vehicle_id_fkey (id, title, plate),
+          vehicle:products!financial_transactions_vehicle_id_fkey (id, title, plate),
           account:chart_of_accounts!financial_transactions_account_category_id_fkey (id, name, dre_mapping_key)
         `)
         .eq("user_id", user.id)

@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getEffectiveUserId } from "@/lib/getEffectiveUserId";
 import type { Entity, EntityRole } from "@/integrations/supabase/types-prd";
 import { ENTITY_ROLE_LABELS } from "@/integrations/supabase/types-prd";
 
@@ -109,13 +110,13 @@ export default function Entities() {
   } = useQuery({
     queryKey: ["entities"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      const effectiveId = await getEffectiveUserId();
+      if (!effectiveId) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("entities")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", effectiveId)
         .is("deleted_at", null)
         .order("name", { ascending: true });
 

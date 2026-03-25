@@ -191,7 +191,7 @@ export default function RelatorioComissoes() {
           id, amount, status, due_date, payment_date, description, vehicle_id,
           seller_entity:seller_entity_id (id, name),
           entity:entity_id (id, name),
-          vehicle:vehicle_id (id, title, plate),
+          vehicle:products!financial_transactions_vehicle_id_fkey (id, title, plate),
           account:account_category_id (dre_mapping_key)
         `)
         .eq("user_id", user.id)
