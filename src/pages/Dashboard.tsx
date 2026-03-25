@@ -22,7 +22,7 @@ const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set
 
 // AUTOFLOW diverse chart palette for brands
 const CHART_COLORS = [
-  "#2563EB", // Primary Blue
+  "#A6DD05", // Primary Lime-Green
   "#059669", // Emerald
   "#EA580C", // Orange
   "#DC2626", // Red
@@ -71,7 +71,7 @@ function KpiSkeleton() {
 function StatusPill({ status }: { status: string }) {
   const cfg: Record<string, { label: string; bg: string; text: string }> = {
     paid:     { label: "Pago",      bg: "#DCFCE7", text: "#16A34A" },
-    open:     { label: "Aberto",    bg: "#EFF6FF", text: "#2563EB" },
+    open:     { label: "Aberto",    bg: "#F9FFE6", text: "#6B8A00" },
     overdue:  { label: "Vencido",   bg: "#FEE2E2", text: "#DC2626" },
     partial:  { label: "Parcial",   bg: "#FEF9C3", text: "#A16207" },
     cancelled:{ label: "Cancelado", bg: "#F1F5F9", text: "#64748B" },
@@ -206,7 +206,7 @@ export default function Dashboard() {
     <div
       className="rounded-[20px] p-6 transition-all duration-200 hover-lift"
       style={{
-        background: gradient ? "linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)" : "#FFFFFF",
+        background: gradient ? "linear-gradient(135deg, #0C0E12 0%, #1a1f2e 100%)" : "#FFFFFF",
         boxShadow: gradient ? "var(--shadow-brand)" : "var(--shadow-sm)",
       }}
     >
@@ -223,7 +223,7 @@ export default function Dashboard() {
         >
           <Icon
             className="h-5 w-5"
-            style={{ color: gradient ? "#fff" : (iconColor ?? "#2563EB") }}
+            style={{ color: gradient ? "#E0FF74" : (iconColor ?? "#A6DD05") }}
             strokeWidth={1.5}
           />
         </div>
@@ -277,7 +277,7 @@ export default function Dashboard() {
           className="flex items-center gap-1.5 px-4 py-2 rounded-[10px] text-sm font-medium text-white transition-all duration-150 hover:opacity-90 btn-press"
           style={{
             fontFamily: "var(--font-ui)",
-            background: "linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)",
+            background: "linear-gradient(135deg, #0C0E12 0%, #1a1f2e 100%)",
             boxShadow: "var(--shadow-brand)",
           }}
         >
@@ -298,7 +298,7 @@ export default function Dashboard() {
         />
         <KpiCard title="Despesas do Mês"   value={formatCurrency(kpis.despesasMes)}  sub="Pagas no mês atual"        icon={ArrowDownRight} iconColor="#EF4444" />
         <KpiCard title="Resultado do Mês"  value={formatCurrency(kpis.resultadoMes)} sub="Receita − Despesas"        icon={kpis.resultadoMes >= 0 ? TrendingUp : TrendingDown} iconColor={kpis.resultadoMes >= 0 ? "#22C55E" : "#EF4444"} />
-        <KpiCard title="Veículos em Estoque" value={String(kpis.veiculosEstoque)}    sub={`${kpis.veiculosVendidosMes} vendidos este mês`} icon={Car} iconColor="#2563EB" />
+        <KpiCard title="Veículos em Estoque" value={String(kpis.veiculosEstoque)}    sub={`${kpis.veiculosVendidosMes} vendidos este mês`} icon={Car} iconColor="#A6DD05" />
       </div>
 
       {/* ── KPI Row 2 ── */}
@@ -306,7 +306,7 @@ export default function Dashboard() {
         <KpiCard title="A Receber"          value={formatCurrency(kpis.aReceber)}          sub="Receitas em aberto"            icon={ArrowUpRight}   iconColor="#22C55E" />
         <KpiCard title="A Pagar"            value={formatCurrency(kpis.aPagar)}            sub={`${kpis.overdueExpenseCount} vencidas`} icon={kpis.overdueExpenseCount > 0 ? AlertTriangle : Clock} iconColor="#EF4444" />
         <KpiCard title="Comissões Pendentes" value={formatCurrency(kpis.comissoesPendentes)} sub={`${kpis.comissoesPendentesCount} em aberto`} icon={DollarSign} iconColor="#F59E0B" />
-        <KpiCard title="Ticket Médio Venda" value={kpis.ticketMedioVenda > 0 ? formatCurrency(kpis.ticketMedioVenda) : "—"} sub={`${kpis.soldThisMonthCount} venda(s) este mês`} icon={TrendingUp} iconColor="#2563EB" />
+        <KpiCard title="Ticket Médio Venda" value={kpis.ticketMedioVenda > 0 ? formatCurrency(kpis.ticketMedioVenda) : "—"} sub={`${kpis.soldThisMonthCount} venda(s) este mês`} icon={TrendingUp} iconColor="#A6DD05" />
       </div>
 
       {/* ── Charts ── */}
@@ -325,7 +325,7 @@ export default function Dashboard() {
                 <XAxis dataKey="month" tick={{ fontSize: 12, fontFamily: "var(--font-ui)", fill: "#94A3B8" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fontFamily: "var(--font-ui)", fill: "#94A3B8" }} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="Receita" fill="#2563EB" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="Receita" fill="#A6DD05" radius={[8, 8, 0, 0]} />
                 <Bar dataKey="Despesa" fill="#EF4444" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -379,8 +379,8 @@ export default function Dashboard() {
         {/* Last transactions */}
         <div className="bg-white rounded-[20px] p-6" style={{ boxShadow: "var(--shadow-sm)" }}>
           <div className="flex items-center gap-2 mb-5">
-            <div className="h-8 w-8 rounded-[10px] flex items-center justify-center" style={{ background: "rgba(105,80,240,0.1)" }}>
-              <ReceiptText className="h-4 w-4" style={{ color: "#2563EB" }} strokeWidth={1.5} />
+            <div className="h-8 w-8 rounded-[10px] flex items-center justify-center" style={{ background: "rgba(166,221,5,0.12)" }}>
+              <ReceiptText className="h-4 w-4" style={{ color: "#A6DD05" }} strokeWidth={1.5} />
             </div>
             <h2 className="text-sm font-semibold text-[#1A1A2E]" style={{ fontFamily: "var(--font-ui)" }}>Últimas Transações</h2>
           </div>
@@ -412,8 +412,8 @@ export default function Dashboard() {
         {/* Recent vehicles */}
         <div className="bg-white rounded-[20px] p-6" style={{ boxShadow: "var(--shadow-sm)" }}>
           <div className="flex items-center gap-2 mb-5">
-            <div className="h-8 w-8 rounded-[10px] flex items-center justify-center" style={{ background: "rgba(105,80,240,0.1)" }}>
-              <Car className="h-4 w-4" style={{ color: "#2563EB" }} strokeWidth={1.5} />
+            <div className="h-8 w-8 rounded-[10px] flex items-center justify-center" style={{ background: "rgba(166,221,5,0.12)" }}>
+              <Car className="h-4 w-4" style={{ color: "#A6DD05" }} strokeWidth={1.5} />
             </div>
             <h2 className="text-sm font-semibold text-[#1A1A2E]" style={{ fontFamily: "var(--font-ui)" }}>Veículos Adicionados</h2>
           </div>
@@ -429,7 +429,7 @@ export default function Dashboard() {
                       {formatDate(v.created_at)}
                     </p>
                   </div>
-                  <span className="font-semibold text-sm whitespace-nowrap text-[#2563EB]" style={{ fontFamily: "var(--font-ui)" }}>
+                  <span className="font-semibold text-sm whitespace-nowrap text-[#A6DD05]" style={{ fontFamily: "var(--font-ui)" }}>
                     {v.price != null ? formatCurrency(Number(v.price)) : "—"}
                   </span>
                 </div>

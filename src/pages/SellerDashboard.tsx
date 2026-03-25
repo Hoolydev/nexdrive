@@ -87,7 +87,7 @@ export default function SellerDashboard() {
   };
 
   const STATUS_MAP: Record<string, { label: string; color: string }> = {
-    new: { label: "Novo", color: "bg-[#DBEAFE] text-[#2563EB]" },
+    new: { label: "Novo", color: "bg-[#F9FFE6] text-[#6B8A00]" },
     contacted: { label: "Contactado", color: "bg-[#FEF3C7] text-[#D97706]" },
     negotiating: { label: "Negociando", color: "bg-[#E0E7FF] text-[#4F46E5]" },
     won: { label: "Fechado ✓", color: "bg-[#D1FAE5] text-[#059669]" },
@@ -97,7 +97,7 @@ export default function SellerDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#A6DD05] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -124,7 +124,7 @@ export default function SellerDashboard() {
             label: "Total de Leads",
             value: stats.totalLeads,
             icon: Users,
-            color: "text-[#2563EB]",
+            color: "text-[#A6DD05]",
             bg: "bg-[#DBEAFE]",
           },
           {
@@ -172,12 +172,12 @@ export default function SellerDashboard() {
       <div className="bg-white rounded-[14px] border border-[#E8E8F0] p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-bold text-[#1A1A2E] flex items-center gap-2" style={{ fontFamily: "var(--font-display)" }}>
-            <Kanban className="w-5 h-5 text-[#2563EB]" />
+            <Kanban className="w-5 h-5 text-[#A6DD05]" />
             Leads Recentes
           </h2>
           <a
             href="/crm"
-            className="text-xs font-bold text-[#2563EB] hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-[#A6DD05] hover:underline flex items-center gap-1"
           >
             Ver CRM <ArrowUpRight className="w-3 h-3" />
           </a>

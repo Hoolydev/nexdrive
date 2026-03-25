@@ -39,7 +39,7 @@ interface TeamMember {
 }
 
 const ROLE_LABELS: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  owner: { label: "Dono", color: "bg-[#DBEAFE] text-[#2563EB]", icon: ShieldCheck },
+  owner: { label: "Dono", color: "bg-[#F9FFE6] text-[#6B8A00]", icon: ShieldCheck },
   manager: { label: "Gestor", color: "bg-[#FEF3C7] text-[#D97706]", icon: Shield },
   seller: { label: "Vendedor", color: "bg-[#D1FAE5] text-[#059669]", icon: ShieldAlert },
 };
@@ -163,7 +163,7 @@ export default function TeamManagement() {
             className="text-2xl font-bold text-[#1A1A2E] flex items-center gap-3"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            <Users className="w-7 h-7 text-[#2563EB]" />
+            <Users className="w-7 h-7 text-[#A6DD05]" />
             Gestão de Equipe
           </h1>
           <p className="text-sm text-[#6B6B8A] mt-1" style={{ fontFamily: "var(--font-ui)" }}>
@@ -245,7 +245,7 @@ export default function TeamManagement() {
       {/* Members List */}
       {loading ? (
         <div className="flex justify-center py-20">
-          <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#A6DD05] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -260,7 +260,7 @@ export default function TeamManagement() {
                 className="flex items-center justify-between p-4 bg-white rounded-[14px] border border-[#E8E8F0] hover:shadow-md transition-shadow"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#2563EB] font-bold text-sm uppercase"
+                  <div className="w-10 h-10 rounded-full bg-[#F9FFE6] flex items-center justify-center text-[#6B8A00] font-bold text-sm uppercase"
                     style={{ fontFamily: "var(--font-display)" }}
                   >
                     {(member.display_name || member.email || "?").charAt(0)}

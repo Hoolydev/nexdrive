@@ -9,9 +9,9 @@ import {
   staticFile,
 } from "remotion";
 
-const BRAND = "#2563EB";
-const BRAND2 = "#3B82F6";
-const BG = "#0f172a";
+const BRAND = "#A6DD05";
+const BRAND2 = "#E0FF74";
+const BG = "#0C0E12";
 const SURFACE = "#1e293b";
 const BORDER = "rgba(255,255,255,0.08)";
 
@@ -77,7 +77,7 @@ const AppShell = ({ children, activeNav = 1 }: { children: React.ReactNode; acti
   return (
     <div style={{ display: "flex", height: 520 }}>
       {/* Sidebar */}
-      <div style={{ width: 64, background: "#0f172a", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 20, paddingBottom: 20, gap: 0 }}>
+      <div style={{ width: 64, background: "#0C0E12", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 20, paddingBottom: 20, gap: 0 }}>
         <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg, ${BRAND}, ${BRAND2})`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24, boxShadow: `0 0 20px ${BRAND}88` }}>
           <span style={{ color: "#fff", fontSize: 11, fontWeight: 900, fontFamily: "Inter, sans-serif" }}>ND</span>
         </div>

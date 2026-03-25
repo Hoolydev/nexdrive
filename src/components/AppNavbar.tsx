@@ -106,7 +106,7 @@ function TopNavLink({ item }: { item: NavItem }) {
         "relative flex items-center gap-1.5 px-1 py-1 text-sm transition-colors duration-150 whitespace-nowrap",
         "font-ui font-medium",
         isActive
-          ? "text-[#2563EB]"
+          ? "text-[#A6DD05]"
           : "text-[#6B6B8A] hover:text-[#1A1A2E]",
       ].join(" ")}
       style={{ fontFamily: "var(--font-ui)" }}
@@ -115,7 +115,7 @@ function TopNavLink({ item }: { item: NavItem }) {
       {item.title}
       {/* Active underline */}
       {isActive && (
-        <span className="absolute -bottom-[17px] left-0 right-0 h-0.5 rounded-full bg-[#2563EB]" />
+        <span className="absolute -bottom-[17px] left-0 right-0 h-0.5 rounded-full bg-[#A6DD05]" />
       )}
     </NavLink>
   );
@@ -154,7 +154,7 @@ function TopNavDropdown({ group }: { group: DropdownGroup }) {
         onClick={() => setOpen((v) => !v)}
         className={[
           "relative flex items-center gap-1.5 px-1 py-1 text-sm transition-colors duration-150 whitespace-nowrap font-medium",
-          isChildActive ? "text-[#2563EB]" : "text-[#6B6B8A] hover:text-[#1A1A2E]",
+          isChildActive ? "text-[#A6DD05]" : "text-[#6B6B8A] hover:text-[#1A1A2E]",
         ].join(" ")}
         style={{ fontFamily: "var(--font-ui)" }}
       >
@@ -164,7 +164,7 @@ function TopNavDropdown({ group }: { group: DropdownGroup }) {
           className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
         {isChildActive && (
-          <span className="absolute -bottom-[17px] left-0 right-0 h-0.5 rounded-full bg-[#2563EB]" />
+          <span className="absolute -bottom-[17px] left-0 right-0 h-0.5 rounded-full bg-[#A6DD05]" />
         )}
       </button>
 
@@ -183,7 +183,7 @@ function TopNavDropdown({ group }: { group: DropdownGroup }) {
                 [
                   "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors duration-150",
                   isActive
-                    ? "text-[#2563EB] font-medium bg-[rgba(105,80,240,0.06)]"
+                    ? "text-[#A6DD05] font-medium bg-[rgba(166,221,5,0.08)]"
                     : "text-[#6B6B8A] hover:text-[#1A1A2E] hover:bg-[#F8FAFC]",
                 ].join(" ")
               }
@@ -267,7 +267,7 @@ function MobileDrawer({
                 [
                   "flex items-center gap-3 px-4 py-2.5 rounded-[10px] text-sm font-medium transition-all duration-150",
                   isActive
-                    ? "bg-[rgba(105,80,240,0.08)] text-[#2563EB]"
+                    ? "bg-[rgba(166,221,5,0.1)] text-[#A6DD05]"
                     : "text-[#6B6B8A] hover:bg-[#F8FAFC] hover:text-[#1A1A2E]",
                 ].join(" ")
               }
@@ -372,7 +372,7 @@ export function AppNavbar() {
           {/* Right actions */}
           <div className="flex items-center gap-2 ml-auto">
             {/* Search (desktop) */}
-            <div className="hidden xl:flex items-center gap-2 h-9 px-3 rounded-[10px] bg-[#F8FAFC] border border-transparent focus-within:border-[#2563EB] focus-within:shadow-[0_0_0_3px_rgba(105,80,240,0.12)] transition-all">
+            <div className="hidden xl:flex items-center gap-2 h-9 px-3 rounded-[10px] bg-[#F8FAFC] border border-transparent focus-within:border-[#A6DD05] focus-within:shadow-[0_0_0_3px_rgba(166,221,5,0.15)] transition-all">
               <Search className="h-4 w-4 text-[#94A3B8]" />
               <input
                 type="text"
@@ -388,7 +388,7 @@ export function AppNavbar() {
             )}
 
             {/* Notification bell */}
-            <button className="h-9 w-9 flex items-center justify-center rounded-[10px] bg-[#F8FAFC] text-[#6B6B8A] hover:text-[#2563EB] hover:bg-[rgba(105,80,240,0.08)] transition-colors">
+            <button className="h-9 w-9 flex items-center justify-center rounded-[10px] bg-[#F8FAFC] text-[#6B6B8A] hover:text-[#A6DD05] hover:bg-[rgba(166,221,5,0.1)] transition-colors">
               <Bell className="h-4.5 w-4.5 h-[18px] w-[18px]" />
             </button>
 

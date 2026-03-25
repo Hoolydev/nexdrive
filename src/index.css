@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════
-   DATIFY SaaS Design System — CSS Tokens
-   NexDrive | Brand: #2563EB Primary Blue
+   NexDrive Design System — CSS Tokens
+   Brand: #A6DD05 Lime Green | Accent: #E0FF74
    ═══════════════════════════════════════════════════════════════════ */
 
 @layer base {
@@ -19,8 +19,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;          /* #2563EB brand primary */
-    --primary-foreground: 0 0% 100%;
+    --primary: 73 95% 44%;            /* #A6DD05 brand lime-green */
+    --primary-foreground: 100 100% 10%; /* #213201 dark text on lime */
 
     --secondary: 210 40% 96%;        /* #F1F5F9 */
     --secondary-foreground: 222 47% 11%;
@@ -28,24 +28,25 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%; /* #64748B text secondary */
 
-    --accent: 221 83% 53%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 73 95% 44%;
+    --accent-foreground: 100 100% 10%;
 
     --destructive: 0 84% 60%;        /* #EF4444 */
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;           /* #E2E8F0 */
     --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --ring: 73 95% 44%;
 
     /* UI radius tokens (shadcn base) */
     --radius: 0.875rem;              /* 14px = radius-md default */
 
-    /* ── Brand Tokens (Datify Blue) ── */
-    --color-dark-base: #0F172A;
-    --color-brand-primary: #2563EB;
-    --color-brand-secondary: #1D4ED8;
-    --color-brand-light: #3B82F6;
+    /* ── Brand Tokens (Lime Green) ── */
+    --color-dark-base: #0C0E12;
+    --color-brand-primary: #A6DD05;
+    --color-brand-secondary: #8BC406;
+    --color-brand-light: #E0FF74;
+    --color-brand-dark: #213201;
     --color-bg-app: #F8FAFC;
     --color-surface: #FFFFFF;
     --color-border: #E2E8F0;
@@ -55,12 +56,12 @@
     --color-success: #22C55E;
     --color-warning: #F59E0B;
     --color-danger: #EF4444;
-    --color-info: #3B82F6;
+    --color-info: #A6DD05;
 
     /* ── Typography ── */
-    --font-display: 'Onest', system-ui, sans-serif;
-    --font-ui: 'Onest', system-ui, sans-serif;
-    --font-body: 'Onest', system-ui, sans-serif;
+    --font-display: 'Space Grotesk', 'Onest', system-ui, sans-serif;
+    --font-ui: 'Space Grotesk', 'Onest', system-ui, sans-serif;
+    --font-body: 'Space Grotesk', 'Onest', system-ui, sans-serif;
 
     /* ── Radius Scale ── */
     --radius-xs: 6px;
@@ -82,22 +83,22 @@
     --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.06);
     --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.08);
     --shadow-md: 0 4px 20px rgba(15, 23, 42, 0.10);
-    --shadow-lg: 0 8px 40px rgba(37, 99, 235, 0.15);
-    --shadow-brand: 0 4px 24px rgba(37, 99, 235, 0.25);
+    --shadow-lg: 0 8px 40px rgba(166, 221, 5, 0.15);
+    --shadow-brand: 0 4px 24px rgba(166, 221, 5, 0.25);
 
     /* ── Layout ── */
     --navbar-height: 64px;
     --sidebar-width: 240px;
 
     /* ── Sidebar (dark always) ── */
-    --sidebar-background: 222 47% 11%;   /* #0F172A */
+    --sidebar-background: 220 20% 5%;    /* #0C0E12 */
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 28% 17%;       /* #1E293B */
+    --sidebar-primary: 73 95% 44%;
+    --sidebar-primary-foreground: 100 100% 10%;
+    --sidebar-accent: 220 10% 12%;       /* #1a1f2e */
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 215 28% 17%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-border: 220 10% 12%;
+    --sidebar-ring: 73 95% 44%;
   }
 
   /* No dark mode override required — system is a light-mode system */
@@ -108,27 +109,27 @@
     --card-foreground: 0 0% 95%;
     --popover: 222 47% 11%;
     --popover-foreground: 0 0% 95%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 73 95% 44%;
+    --primary-foreground: 100 100% 10%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 0 0% 90%;
     --muted: 215 28% 17%;
     --muted-foreground: 215 16% 65%;
-    --accent: 221 83% 53%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 73 95% 44%;
+    --accent-foreground: 100 100% 10%;
     --destructive: 0 63% 45%;
     --destructive-foreground: 0 0% 100%;
     --border: 215 28% 17%;
     --input: 215 28% 17%;
-    --ring: 221 83% 53%;
-    --sidebar-background: 222 47% 8%;
+    --ring: 73 95% 44%;
+    --sidebar-background: 220 20% 4%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 11%;
+    --sidebar-primary: 73 95% 44%;
+    --sidebar-primary-foreground: 100 100% 10%;
+    --sidebar-accent: 220 10% 12%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 215 28% 14%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-border: 220 10% 10%;
+    --sidebar-ring: 73 95% 44%;
   }
 }
 
@@ -246,6 +247,27 @@
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+}
+
+/* ── Landing Page Design Tokens (Dealerspace-style) ── */
+.landing-page {
+  --lp-primary: #E0FF74;
+  --lp-primary-hover: #A6DD05;
+  --lp-primary-dark: #213201;
+  --lp-dark: #0C0E12;
+  --lp-body-text: #363636;
+  --lp-muted-text: #535862;
+  --lp-light-bg: #F5F6F7;
+  --lp-border: #D5D7DA;
+  --lp-font: 'Space Grotesk', sans-serif;
+  font-family: var(--lp-font);
+}
+
+.landing-page h1,
+.landing-page h2,
+.landing-page h3,
+.landing-page h4 {
+  font-family: var(--lp-font);
 }
 
 /* ── Scrollbar styling ── */

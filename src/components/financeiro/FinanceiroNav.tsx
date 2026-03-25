@@ -70,7 +70,7 @@ const GROUPS = [
 
 /* ─────────────────────────────────────────────────────────────────
    FinanceiroNav — dark sidebar + content outlet
-   AUTOFLOW spec: 240px, #0F172A bg, active item: #2563EB + 3px indicator
+   AUTOFLOW spec: 240px, #0C0E12 bg, active item: #A6DD05 + 3px indicator
    ───────────────────────────────────────────────────────────────── */
 
 export function FinanceiroNav({ children }: { children?: React.ReactNode }) {
@@ -81,14 +81,14 @@ export function FinanceiroNav({ children }: { children?: React.ReactNode }) {
         className="hidden md:flex flex-col shrink-0 overflow-y-auto"
         style={{
           width: "var(--sidebar-width)",
-          background: "linear-gradient(180deg, #0F172A 0%, #1E293B 100%)",
+          background: "linear-gradient(180deg, #0C0E12 0%, #1a1f2e 100%)",
         }}
       >
         {/* Module header */}
         <div className="px-5 pt-6 pb-4">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-[8px] bg-[#2563EB] flex items-center justify-center">
-              <Wallet className="h-4 w-4 text-white" />
+            <div className="h-7 w-7 rounded-[8px] bg-[#A6DD05] flex items-center justify-center">
+              <Wallet className="h-4 w-4 text-[#213201]" />
             </div>
             <span
               className="text-white font-semibold text-sm"
@@ -124,7 +124,7 @@ export function FinanceiroNav({ children }: { children?: React.ReactNode }) {
                       cn(
                         "relative flex items-center gap-3 px-3 py-2 rounded-[14px] text-sm transition-all duration-150 group",
                         isActive
-                          ? "bg-[#2563EB] text-white font-medium"
+                          ? "bg-[#A6DD05] text-[#213201] font-medium"
                           : "text-white/55 hover:text-white hover:bg-white/10"
                       )
                     }
@@ -134,7 +134,7 @@ export function FinanceiroNav({ children }: { children?: React.ReactNode }) {
                       <>
                         {/* 3px left indicator bar */}
                         {isActive && (
-                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#3B82F6] rounded-r-full -ml-[1px]" />
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#E0FF74] rounded-r-full -ml-[1px]" />
                         )}
                         <item.icon
                           className="h-4 w-4 shrink-0"
@@ -176,7 +176,7 @@ export function FinanceiroNav({ children }: { children?: React.ReactNode }) {
                 cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-medium whitespace-nowrap transition-colors",
                   isActive
-                    ? "bg-[#2563EB] text-white"
+                    ? "bg-[#A6DD05] text-[#213201]"
                     : "text-[#6B6B8A] hover:bg-[#F8FAFC] hover:text-[#1A1A2E]"
                 )
               }
